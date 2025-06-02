@@ -92,7 +92,6 @@
       margin-bottom: 18px;
       background: #f6f8fa;
     }
-    /* زر التأكيد دائماً بالأسود */
     #confirm-location, #confirm-location:disabled {
       color: #222 !important;
       background: #f3f3f3 !important;
@@ -349,7 +348,7 @@ function getShippingOptions() {
     }
   });
 
-  // "توصيل منزلي": إذا حي الورود مختار وجميع المنتجات متوفرة في مخزن الورود OR جميع المنتجات متوفرة في المتجر الالكتروني
+  // توصيل منزلي: إذا حي الورود مختار وجميع المنتجات متوفرة في مخزن الورود OR جميع المنتجات متوفرة في المتجر الالكتروني
   let allowNormal = items.length > 0 && (
     (userDistrict == "حي الورود" && items.every(p=>p.inStore)) ||
     items.every(p=>p.inOnline)
@@ -360,10 +359,10 @@ function getShippingOptions() {
     available: (userDistrict == "حي الورود" ? p.inStore : p.inOnline)
   }));
 
-  // شحن سريع متاح فقط إذا كان حي الورود وكل المنتجات متوفرة في مخزن الورود
+  // الشحن السريع فقط إذا حي الورود وكل المنتجات متوفرة في الورود
   let allowFast = !userSkipped && userDistrict === "حي الورود" && items.length > 0 && items.every(p=>p.inStore);
 
-  // استلام من المعرض: فقط إذا تم اختيار حي الورود وكل المنتجات متوفرة في الورود
+  // استلام من المعرض: فقط إذا حي الورود وكل المنتجات متوفرة في الورود
   let allowStore = !userSkipped && userDistrict === "حي الورود" && items.length > 0 && items.every(p=>p.inStore);
 
   return [
@@ -394,7 +393,7 @@ function getShippingOptions() {
       key: "store",
       label: "استلام من المعرض",
       icon: "🏪",
-      available: allowStore,
+      available: true, // متاح دائماً حتى لو لم تتحقق الشروط (للتنقل)، لكن زر إتمام الطلب لن يعمل إلا عند تحقق الشروط
       count: items.filter(p=>p.inStore).length,
       total: items.length,
       products: items.map(p => ({
@@ -420,9 +419,9 @@ function renderCheckout() {
       </div>
       `;
     }
-    // باقي الخيارات عادي
+    // باقي الخيارات تظل متاحة دائماً للاختيار
     return `
-      <div class="option-box${!opt.available ? ' disabled-opt' : ''}">
+      <div class="option-box">
         <div class="option-header">
           <input class="option-radio" type="radio" name="shipping" id="shipping-${opt.key}" value="${opt.key}" ${selectedShipping===opt.key?'checked':''} onclick="selectShipping('${opt.key}')">
           <label for="shipping-${opt.key}" class="option-title">${opt.label} ${opt.icon}</label>
@@ -476,6 +475,7 @@ function deleteProduct(id) {
 function updateCompleteBtn() {
   const options = getShippingOptions();
   const opt = options.find(x=>x.key===selectedShipping);
+  // زر إتمام الطلب يتفعل فقط إذا كان الخيار المختار متاح فعليًا ويوجد منتج واحد متاح على الأقل
   const enable = !!(opt && opt.available && opt.products.some(p=>p.available));
   document.getElementById("final-complete-btn").disabled = !enable;
 }
