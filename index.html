@@ -360,11 +360,15 @@ function getShippingOptions() {
   }
   // =====================================
 
-  let normalProducts = items.map(p => ({
-    id: p.id,
-    name: p.name,
-    available: (userDistrict == "حي الورود" ? p.inStore : p.inOnline)
-  }));
+ let normalProducts = items.map(p => {
+  // إذا السلة فقط ماكينة القهوة وحي الورود، اعتبرها متوفرة للشحن العادي
+  if (userDistrict == "حي الورود" && items.length === 1 && items[0].id === 2) {
+    return { id: p.id, name: p.name, available: true };
+  } else {
+    return { id: p.id, name: p.name, available: (userDistrict == "حي الورود" ? p.inStore : p.inOnline) };
+  }
+});
+
 
   let allowFast = !userSkipped && userDistrict === "حي الورود" && items.length > 0 && items.every(p=>p.inStore);
   let allowStore = !userSkipped && userDistrict === "حي الورود" && items.length > 0 && items.every(p=>p.inStore);
