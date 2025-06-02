@@ -112,7 +112,7 @@
       background: #fbeaea; color: var(--danger);
       padding: 3px 9px; border-radius: 8px; margin-right: 12px; font-size:13px;
     }
-    .green {color: #14a659;}
+    .green {color: #13c391;}
     .red {color: var(--danger);}
     /* Checkout options - horizontal */
     .shipping-options {
@@ -141,9 +141,11 @@
     .disabled {opacity: 0.45; pointer-events: none;}
     .complete-btn {background: var(--accent); color: #fff; padding: 10px 32px; border: none; border-radius: 11px; cursor: pointer; font-size:1.12rem; display:block; margin:auto;}
     .complete-btn:disabled {background:#b9b9b9;}
-    .shipping-products-list {margin:4px 0 0 0; padding:0; list-style:none;}
-    .shipping-product-name {display:inline-block; margin:2px 0;}
-    .shipping-product-name.red {color:var(--danger); font-weight:bold; margin-left:4px;}
+    .shipping-products-list {margin:12px 0 0 0; padding:0 0 0 0; list-style:none;}
+    .shipping-product-name {display:inline-block; margin:2px 0 2px 8px;}
+    .shipping-product-name.green {color:var(--accent);}
+    .shipping-product-name.red {color:var(--danger); font-weight:bold;}
+    .delete-prod-btn {margin-right:4px; font-size:15px; color:var(--danger); border:none; background:none; cursor:pointer;}
     @media (max-width:950px) {
       .main-wrapper {max-width:98vw;}
       .products-grid {grid-template-columns: 1fr;}
@@ -198,6 +200,7 @@
 <div id="checkout" class="checkout" style="display:none;">
   <h2 style="margin-bottom:10px;">إكمال الطلب</h2>
   <div class="shipping-options" id="shipping-options"></div>
+  <div id="selected-shipping-products"></div>
   <button class="complete-btn" id="final-complete-btn" onclick="submitOrder()" disabled>إتمام الطلب</button>
   <button class="cart-btn" style="background:#bbb;color:#333; margin-top:16px;" onclick="hideCheckout()">عودة</button>
 </div>
@@ -330,7 +333,7 @@ function hideCheckout() {
   showProducts();
 }
 
-function renderCheckout() {
+function getShippingOptions() {
   const items = cart.map(c => {
     const prod = products.find(p => p.id == c.id);
     return {
@@ -340,24 +343,25 @@ function renderCheckout() {
     }
   });
 
-  // حساب التوفر حسب نوع الشحن
-  // شحن عادي: المنتج لازم متوفر في المتجر الالكتروني
-  let normalAvailable = items.every(p => p.inOnline) && items.length > 0;
-  // شحن سريع: لازم حي الورود + كل المنتجات متوفرة في الورود فقط
-  let fastAvailable = !userSkipped && userDistrict === "حي الورود" && items.length > 0 && items.every(p=>p.inStore);
-  // استلام من المعرض: لازم حي الورود + كل المنتجات متوفرة في الورود فقط
-  let storeAvailable = !userSkipped && userDistrict === "حي الورود" && items.length > 0 && items.every(p=>p.inStore);
+  // شروط التوصيل المنزلي: 
+  // 1- جميع المنتجات متوفرة في الورود أو جميعها متوفرة في المتجر الالكتروني أو مختلطة (أي متوفر في أحدهما فقط)
+  // يسمح إذا كل المنتجات متوفرة في الورود حتى لو غير متوفرة في المتجر الالكتروني
+  let allowNormal = items.length > 0 && (items.every(p=>p.inOnline) || items.every(p=>p.inStore));
+  // شحن سريع: فقط إذا تم اختيار حي الورود وكل المنتجات متوفرة في الورود
+  let allowFast = !userSkipped && userDistrict === "حي الورود" && items.length > 0 && items.every(p=>p.inStore);
+  // استلام من المعرض: فقط إذا تم اختيار حي الورود وكل المنتجات متوفرة في الورود
+  let allowStore = !userSkipped && userDistrict === "حي الورود" && items.length > 0 && items.every(p=>p.inStore);
 
-  // بناء خيارات الشحن
-  let options = [
+  return [
     {
       key: "normal",
       label: "توصيل منزلي",
       icon: "🚚",
-      available: normalAvailable,
+      available: allowNormal,
       count: items.filter(p=>p.inOnline).length,
       total: items.length,
       products: items.map(p => ({
+        id: p.id,
         name: p.name,
         available: p.inOnline
       }))
@@ -366,10 +370,11 @@ function renderCheckout() {
       key: "fast",
       label: "شحن سريع",
       icon: "⚡",
-      available: fastAvailable,
+      available: allowFast,
       count: items.filter(p=>p.inStore).length,
       total: items.length,
       products: items.map(p => ({
+        id: p.id,
         name: p.name,
         available: p.inStore
       }))
@@ -378,64 +383,85 @@ function renderCheckout() {
       key: "store",
       label: "استلام من المعرض",
       icon: "🏪",
-      available: storeAvailable,
+      available: allowStore,
       count: items.filter(p=>p.inStore).length,
       total: items.length,
       products: items.map(p => ({
+        id: p.id,
         name: p.name,
         available: p.inStore
-      })),
-      storeStatus: items.filter(p=>p.inStore).length > 0
-        ? `<span class="green">متوفر (${items.filter(p=>p.inStore).length})</span>`
-        : `<span class="red">لا يوجد منتجات متوفرة</span>`
+      }))
     }
   ];
-
-  // تحديث الخيارات أفقياً
-  let html = options.map(opt => `
-    <label class="option-box${!opt.available ? ' disabled' : ''}">
-      <div class="option-header">
-        <input type="radio" name="shipping" class="option-radio" value="${opt.key}" ${opt.available ? '' : 'disabled'}>
-        <span class="option-title">${opt.label} ${opt.icon}</span>
-      </div>
-      <div class="option-availability">${opt.count} من ${opt.total} من المنتجات متوفرة</div>
-      <div class="checkout-products">
-        <ul class="shipping-products-list">
-          ${opt.products.map(p =>
-            `<li class="shipping-product-name${!p.available ? ' red' : ''}">
-              ${p.name}${!p.available ? ' ✗' : ''}
-            </li>`
-          ).join('')}
-        </ul>
-      </div>
-      ${opt.key === "store" ? `<div style="font-size:15px; margin-top:2px;">معرض حي الورود: ${opt.storeStatus}</div>` : ""}
-    </label>
-  `).join('');
-
-  document.getElementById("shipping-options").innerHTML = html;
-
-  // إعادة تفعيل الراديو حسب التوفر
-  document.querySelectorAll('input[name="shipping"]').forEach(el => {
-    el.addEventListener('change', function() {
-      selectedShipping = this.value;
-      document.getElementById("final-complete-btn").disabled = false;
-    });
-  });
-
-  // إذا لا يوجد اختيار أو كل الخيارات غير متاحة عطل الزر
-  selectedShipping = null;
-  document.getElementById("final-complete-btn").disabled = true;
 }
 
-// زر الإتمام الموحد
+function renderCheckout() {
+  const options = getShippingOptions();
+  let html = options.map(opt => `
+    <div class="option-box ${!opt.available ? 'disabled' : ''}">
+      <div class="option-header">
+        <input class="option-radio" type="radio" name="shipping" id="shipping-${opt.key}" value="${opt.key}" ${selectedShipping===opt.key?'checked':''} onclick="selectShipping('${opt.key}')">
+        <label for="shipping-${opt.key}" class="option-title">${opt.label} ${opt.icon}</label>
+      </div>
+      <div class="option-availability">${opt.count} من ${opt.total} من المنتجات متوفرة</div>
+    </div>
+  `).join('');
+  document.getElementById("shipping-options").innerHTML = html;
+
+  // إعادة عرض قائمة المنتجات المختارة حسب الشحن
+  renderSelectedShippingProducts();
+  updateCompleteBtn();
+}
+
+function selectShipping(key) {
+  selectedShipping = key;
+  renderSelectedShippingProducts();
+  updateCompleteBtn();
+}
+
+function renderSelectedShippingProducts() {
+  if (!selectedShipping) {
+    document.getElementById("selected-shipping-products").innerHTML = "";
+    return;
+  }
+  const options = getShippingOptions();
+  const opt = options.find(x=>x.key===selectedShipping);
+  if (!opt) return;
+
+  let html = `<ul class="shipping-products-list">`;
+  opt.products.forEach(prod => {
+    if(prod.available){
+      html += `<li class="shipping-product-name green">✅ ${prod.name}</li>`;
+    } else {
+      html += `<li class="shipping-product-name red">❌ ${prod.name} <button class="delete-prod-btn" onclick="deleteProduct(${prod.id})">حذف</button></li>`;
+    }
+  });
+  html += `</ul>`;
+  document.getElementById("selected-shipping-products").innerHTML = html;
+}
+
+function deleteProduct(id) {
+  cart = cart.filter(p=>p.id!==id);
+  // إذا تم حذف جميع المنتجات، أعد إخفاء المنتجات
+  if(cart.length === 0){
+    selectedShipping = null;
+    document.getElementById("selected-shipping-products").innerHTML = "";
+  }
+  renderCheckout();
+}
+
+function updateCompleteBtn() {
+  const options = getShippingOptions();
+  const opt = options.find(x=>x.key===selectedShipping);
+  // زر إتمام الطلب يتفعل فقط إذا كان هناك منتج واحد متوفر حسب الشحن المختار
+  const enable = !!(opt && opt.available && opt.products.some(p=>p.available));
+  document.getElementById("final-complete-btn").disabled = !enable;
+}
+
 function submitOrder() {
-  if (!selectedShipping) return;
-  let txt = "";
-  if(selectedShipping === "normal") txt = "توصيل منزلي";
-  if(selectedShipping === "fast") txt = "شحن سريع";
-  if(selectedShipping === "store") txt = "استلام من المعرض";
-  alert("تم إتمام الطلب بنجاح (" + txt + ")");
+  alert("تم إتمام الطلب بنجاح (" + selectedShipping + ")");
   cart = [];
+  selectedShipping = null;
   hideCheckout();
   updateCartCount();
 }
