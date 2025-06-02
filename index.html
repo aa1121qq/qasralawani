@@ -11,6 +11,8 @@
       --danger: #e44545;
       --bg: #c5c8cf;
       --card: #fff;
+      --gray: #cccccc;
+      --gray-light: #f4f4f4;
     }
     body {
       font-family: 'Cairo', Arial, sans-serif;
@@ -90,6 +92,12 @@
       margin-bottom: 18px;
       background: #f6f8fa;
     }
+    /* زر التأكيد دائماً بالأسود */
+    #confirm-location, #confirm-location:disabled {
+      color: #222 !important;
+      background: #f3f3f3 !important;
+      opacity: 1;
+    }
     .popup .skip-btn {
       background: none; color: var(--primary); border: none; cursor: pointer; font-size: 1.05rem; margin-top: 6px;
       text-decoration: underline;
@@ -121,6 +129,7 @@
       display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start;
       position: relative;
       min-height: 82px;
+      transition: background 0.2s;
     }
     .option-header {
       display: flex; align-items: center; gap: 7px; width: 100%; margin-bottom: 4px;
@@ -131,6 +140,14 @@
     }
     .option-title { font-weight: bold; font-size: 1.01rem;}
     .option-availability { font-size: 14px; color:#666; margin-bottom:3px;}
+    .gray-text { color: #999 !important; }
+    .gray-bg { background: #ededed !important; }
+    .disabled-opt {
+      color: #999 !important;
+      background: #ededed !important;
+      pointer-events: none;
+      border: 1.5px solid #e0e0e0;
+    }
     .checkout-products {margin:0 0 8px 0; width:100%;}
     .complete-btn {background: var(--accent); color: #fff; padding: 10px 32px; border: none; border-radius: 11px; cursor: pointer; font-size:1.12rem; display:block; margin:auto;}
     .complete-btn:disabled {background:#b9b9b9;}
@@ -165,7 +182,7 @@
       <option value="" selected disabled>اختر الحي</option>
       <option value="حي الورود">حي الورود</option>
     </select><br>
-    <button class="cart-btn" style="width:92%;" id="confirm-location" disabled>تأكيد</button>
+    <button class="cart-btn" id="confirm-location" disabled>تأكيد</button>
     <br>
     <button class="skip-btn" onclick="skipLocation()">تخطي تحديد العنوان</button>
   </div>
@@ -343,7 +360,10 @@ function getShippingOptions() {
     available: (userDistrict == "حي الورود" ? p.inStore : p.inOnline)
   }));
 
+  // شحن سريع متاح فقط إذا كان حي الورود وكل المنتجات متوفرة في مخزن الورود
   let allowFast = !userSkipped && userDistrict === "حي الورود" && items.length > 0 && items.every(p=>p.inStore);
+
+  // استلام من المعرض: فقط إذا تم اختيار حي الورود وكل المنتجات متوفرة في الورود
   let allowStore = !userSkipped && userDistrict === "حي الورود" && items.length > 0 && items.every(p=>p.inStore);
 
   return [
@@ -361,13 +381,14 @@ function getShippingOptions() {
       label: "شحن سريع",
       icon: "⚡",
       available: allowFast,
-      count: items.filter(p=>p.inStore).length,
+      count: allowFast ? items.filter(p=>p.inStore).length : 0,
       total: items.length,
       products: items.map(p => ({
         id: p.id,
         name: p.name,
         available: p.inStore
-      }))
+      })),
+      showCount: allowFast // فقط إذا متاح يعرض العداد
     },
     {
       key: "store",
@@ -387,15 +408,29 @@ function getShippingOptions() {
 
 function renderCheckout() {
   const options = getShippingOptions();
-  let html = options.map(opt => `
-    <div class="option-box">
-      <div class="option-header">
-        <input class="option-radio" type="radio" name="shipping" id="shipping-${opt.key}" value="${opt.key}" ${selectedShipping===opt.key?'checked':''} onclick="selectShipping('${opt.key}')">
-        <label for="shipping-${opt.key}" class="option-title">${opt.label} ${opt.icon}</label>
+  let html = options.map(opt => {
+    // تخصيص مظهر الشحن السريع إذا لم تتحقق الشروط
+    if(opt.key === "fast" && !opt.available){
+      return `
+      <div class="option-box disabled-opt">
+        <div class="option-header">
+          <input class="option-radio" type="radio" name="shipping" id="shipping-${opt.key}" value="${opt.key}" disabled>
+          <label for="shipping-${opt.key}" class="option-title gray-text">${opt.label} ${opt.icon}</label>
+        </div>
       </div>
-      <div class="option-availability">${opt.count} من ${opt.total} من المنتجات متوفرة</div>
-    </div>
-  `).join('');
+      `;
+    }
+    // باقي الخيارات عادي
+    return `
+      <div class="option-box${!opt.available ? ' disabled-opt' : ''}">
+        <div class="option-header">
+          <input class="option-radio" type="radio" name="shipping" id="shipping-${opt.key}" value="${opt.key}" ${selectedShipping===opt.key?'checked':''} onclick="selectShipping('${opt.key}')">
+          <label for="shipping-${opt.key}" class="option-title">${opt.label} ${opt.icon}</label>
+        </div>
+        <div class="option-availability">${(opt.key==="fast"&&!opt.showCount)?"":`${opt.count} من ${opt.total} من المنتجات متوفرة`}</div>
+      </div>
+    `;
+  }).join('');
   document.getElementById("shipping-options").innerHTML = html;
 
   renderSelectedShippingProducts();
@@ -441,7 +476,6 @@ function deleteProduct(id) {
 function updateCompleteBtn() {
   const options = getShippingOptions();
   const opt = options.find(x=>x.key===selectedShipping);
-  // زر إتمام الطلب يتفعل فقط إذا كان هناك منتج واحد متوفر حسب الشحن المختار والشروط محققة
   const enable = !!(opt && opt.available && opt.products.some(p=>p.available));
   document.getElementById("final-complete-btn").disabled = !enable;
 }
