@@ -9,7 +9,7 @@
       --primary: #035cb1;
       --accent: #13c391;
       --danger: #e44545;
-      --bg: #f3f6fb;
+      --bg: #c5c8cf;
       --card: #fff;
     }
     body {
@@ -146,7 +146,6 @@
     </select><br>
     <select id="district">
       <option value="" selected disabled>اختر الحي</option>
-      <option value="حي المعذر">حي المعذر</option>
       <option value="حي الورود">حي الورود</option>
     </select><br>
     <button class="cart-btn" style="width:92%;" id="confirm-location">تأكيد</button>
@@ -250,11 +249,13 @@ function skipLocation() {
 function showProducts() {
   let html = "";
   products.forEach(p => {
-    // اعرض المنتجات المتوفرة في مخزن المتجر الالكتروني دائماً
-    let available = p.stock['مخزن المتجر الالكتروني'] > 0 || (userDistrict == "حي الورود" && p.stock['مخزن الورود'] > 0);
+    // فقط المنتجات المتوفرة في مخزن المتجر الالكتروني إذا تم التخطي
+    let available = userSkipped
+      ? (p.stock['مخزن المتجر الالكتروني'] > 0)
+      : (p.stock['مخزن المتجر الالكتروني'] > 0 || (userDistrict == "حي الورود" && p.stock['مخزن الورود'] > 0));
     let badge = "";
     if (p.stock['مخزن المتجر الالكتروني'] > 0) badge += `<span class="badge">متوفر في المتجر الالكتروني</span>`;
-    if (userDistrict == "حي الورود" && p.stock['مخزن الورود'] > 0) badge += `<span class="badge" style="background:#1e97ed">متوفر في مخزن الورود</span>`;
+    if (!userSkipped && userDistrict == "حي الورود" && p.stock['مخزن الورود'] > 0) badge += `<span class="badge" style="background:#1e97ed">متوفر في مخزن الورود</span>`;
     html += `
       <div class="product-card">
         <img src="${p.image}" class="product-img" alt="${p.name}">
@@ -340,9 +341,8 @@ function renderCheckout() {
   });
   document.getElementById("normal-products").innerHTML = normalProds;
 
-  // شحن سريع: إذا اخترت حي الورود وجميع المنتجات متوفرة في مخزن الورود (وغير متوفر إلا إذا تحقق هذا الشرط)
-  let fastAvail = items.filter(p => p.inStore).length;
-  let allowFast = userDistrict === "حي الورود" && items.length>0 && items.every(p=>p.inStore);
+  // شحن سريع: إذا اخترت حي الورود وجميع المنتجات متوفرة في مخزن الورود فقط (غير متاح عند التخطي)
+  let allowFast = !userSkipped && userDistrict === "حي الورود" && items.length>0 && items.every(p=>p.inStore);
   document.getElementById("fast-availability").innerHTML =
     allowFast ? `${items.length} من ${items.length} من المنتجات متوفرة (حي الورود)` :
     `شحن سريع متاح فقط إذا كانت كل المنتجات متوفرة في مخزن الورود`;
@@ -357,7 +357,7 @@ function renderCheckout() {
   document.getElementById("complete-fast").className = allowFast ? "complete-btn" : "complete-btn disabled";
   document.getElementById("complete-fast").disabled = !allowFast;
 
-  // استلام من المعرض
+  // استلام من المعرض (متاح فقط إذا لم يتم التخطي)
   let storeAvail = items.filter(p => p.inStore).length;
   document.getElementById("store-availability").innerHTML =
     `${storeAvail} من ${items.length} من المنتجات متوفرة`;
@@ -369,4 +369,31 @@ function renderCheckout() {
     </div>`;
   });
   document.getElementById("store-products").innerHTML = storeProds;
-  if (storeAvail
+  if (storeAvail > 0)
+    document.getElementById("store-status").innerHTML = `<span class="green">متوفر (${storeAvail})</span>`;
+  else
+    document.getElementById("store-status").innerHTML = `<span class="red">لا يوجد منتجات متوفرة</span>`;
+  // زر الإتمام للاستلام من المعرض: غير متاح عند التخطي
+  let allowStore = !userSkipped && ((items.length === 1 && items[0].inStore) || (items.length>1 && items.every(p=>p.inStore)));
+  document.getElementById("complete-store").className = allowStore ? "complete-btn" : "complete-btn disabled";
+  document.getElementById("complete-store").disabled = !allowStore;
+}
+
+// حذف من السلة من صفحة الدفع
+function removeCheckout(id) {
+  removeFromCart(id);
+  renderCheckout();
+}
+
+// ------ إتمام الطلب (مجرد تنبيه) -----
+function completeOrder(type) {
+  alert("تم إتمام الطلب بنجاح (" + (type === 'normal' ? "شحن عادي" : type === 'fast' ? "شحن سريع" : "استلام من المعرض") + ")");
+  cart = [];
+  hideCheckout();
+  updateCartCount();
+}
+
+window.onload = function() { showProducts(); }
+</script>
+</body>
+</html>
