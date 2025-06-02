@@ -232,6 +232,13 @@ const products = [
   },
 ];
 
+// قائمة الفروع
+const branches = [
+  { name: "فرع الورود", key: "الورود" },
+  { name: "فرع المعذر", key: "المعذر" },
+  { name: "فرع الشمالي", key: "الشمالي" },
+];
+
 let userDistrict = "";
 let userSkipped = false;
 let cart = [];
@@ -342,7 +349,6 @@ function getShippingOptions() {
     }
   });
 
-  // ======= التعديل المطلوب هنا =======
   let allowNormal = false;
   if (
     userDistrict == "حي الورود" &&
@@ -358,17 +364,15 @@ function getShippingOptions() {
   ) {
     allowNormal = true;
   }
-  // =====================================
 
- let normalProducts = items.map(p => {
-  // إذا السلة فقط ماكينة القهوة وحي الورود، اعتبرها متوفرة للشحن العادي
-  if (userDistrict == "حي الورود" && items.length === 1 && items[0].id === 2) {
-    return { id: p.id, name: p.name, available: true };
-  } else {
-    return { id: p.id, name: p.name, available: (userDistrict == "حي الورود" ? p.inStore : p.inOnline) };
-  }
-});
-
+  let normalProducts = items.map(p => {
+    // إذا السلة فقط ماكينة القهوة وحي الورود، اعتبرها متوفرة للشحن العادي
+    if (userDistrict == "حي الورود" && items.length === 1 && items[0].id === 2) {
+      return { id: p.id, name: p.name, available: true };
+    } else {
+      return { id: p.id, name: p.name, available: (userDistrict == "حي الورود" ? p.inStore : p.inOnline) };
+    }
+  });
 
   let allowFast = !userSkipped && userDistrict === "حي الورود" && items.length > 0 && items.every(p=>p.inStore);
   let allowStore = !userSkipped && userDistrict === "حي الورود" && items.length > 0 && items.every(p=>p.inStore);
@@ -407,10 +411,26 @@ function getShippingOptions() {
       products: items.map(p => ({
         id: p.id,
         name: p.name,
-        available: p.inStore
+        available: p.inStore,
+        stock: p.stock // سنستخدمه للفروع
       }))
     }
   ];
+}
+
+// دالة عرض قائمة الفروع عند الاستلام من المعرض
+function renderBranchesList(productsInCart) {
+  let result = '<div style="margin:13px 0 5px 0;font-size:16px;">الفروع المتاحة:</div><ul style="list-style:none;padding:0;">';
+  branches.forEach(branch => {
+    let available = false;
+    // فقط الورود متاح إذا كل المنتجات متوفرة في مخزن الورود
+    if (branch.key === "الورود" && productsInCart.length && productsInCart.every(p => p.stock && p.stock['مخزن الورود'] > 0)) {
+      available = true;
+    }
+    result += `<li style="font-weight:bold; color:${available ? '#13c391' : '#e44545'};margin-bottom:6px;">${branch.name}</li>`;
+  });
+  result += '</ul>';
+  return result;
 }
 
 function renderCheckout() {
@@ -457,7 +477,14 @@ function renderSelectedShippingProducts() {
   const opt = options.find(x=>x.key===selectedShipping);
   if (!opt) return;
 
-  let html = `<ul class="shipping-products-list">`;
+  let html = "";
+  // إذا الاستلام من المعرض، أضف قائمة الفروع
+  if (selectedShipping === "store") {
+    html += renderBranchesList(
+      cart.map(c => products.find(p => p.id == c.id))
+    );
+  }
+  html += `<ul class="shipping-products-list">`;
   opt.products.forEach(prod => {
     if(prod.available){
       html += `<li class="shipping-product-name green">✅ ${prod.name}</li>`;
