@@ -96,7 +96,7 @@
     }
     /* Cart & checkout */
     .cart, .checkout {
-      max-width: 650px; margin: 60px auto 0; background: var(--card);
+      max-width: 820px; margin: 60px auto 0; background: var(--card);
       border-radius: 15px; box-shadow: 0 5px 18px #0002; padding: 22px 18px 28px 18px;
     }
     .cart h2, .checkout h2 {margin-top:0; margin-bottom: 20px;}
@@ -114,19 +114,33 @@
     }
     .green {color: #14a659;}
     .red {color: var(--danger);}
-    /* Checkout options */
-    .checkout-options { margin: 24px 0;}
-    .option-box {
-      border: 1.5px solid #e6e6e6; border-radius: 13px; padding: 15px 16px 12px 16px; margin-bottom: 13px;
+    /* Checkout options - horizontal */
+    .shipping-options {
+      display: flex; flex-direction: row; gap: 18px; margin-bottom: 33px; margin-top:10px;
+      justify-content: flex-start; flex-wrap: wrap;
     }
-    .option-title { font-weight: bold; font-size: 1.15rem;}
-    .option-availability { margin-top: 5px; font-size: 14px; color:#666;}
-    .disabled {opacity: 0.4; pointer-events: none;}
-    .complete-btn {background: var(--accent); color: #fff; padding: 9px 22px; border: none; border-radius: 11px; cursor: pointer; margin-top: 18px;}
+    .option-box {
+      flex: 1 1 260px;
+      min-width: 230px;
+      border: 1.5px solid #e6e6e6; border-radius: 13px; padding: 15px 16px 12px 16px; 
+      background: #fafbfe;
+      display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start;
+      position: relative;
+      min-height: 110px;
+    }
+    .option-title { font-weight: bold; font-size: 1.08rem; margin-bottom: 6px;}
+    .option-availability { font-size: 14px; color:#666; margin-bottom:8px;}
+    .option-box .checkout-products {margin:0 0 10px 0;}
+    .option-box .complete-btn {margin-top: auto;}
+    .disabled {opacity: 0.45; pointer-events: none;}
+    .complete-btn {background: var(--accent); color: #fff; padding: 8px 18px; border: none; border-radius: 11px; cursor: pointer;}
+    .complete-btn:disabled {background:#b9b9b9;}
     @media (max-width:950px) {
       .main-wrapper {max-width:98vw;}
       .products-grid {grid-template-columns: 1fr;}
       .cart-link {left: 8px;}
+      .shipping-options {flex-direction:column;}
+      .option-box {width:100%;}
     }
     @media (max-width:700px) {
       .main-wrapper {padding:8px;}
@@ -173,22 +187,22 @@
 
 <!-- صفحة اكمال الطلب -->
 <div id="checkout" class="checkout" style="display:none;">
-  <h2>إكمال الطلب</h2>
-  <div class="checkout-options">
+  <h2 style="margin-bottom:10px;">إكمال الطلب</h2>
+  <div class="shipping-options">
     <div class="option-box">
-      <div class="option-title">🚚 شحن عادي</div>
+      <div class="option-title">شحن عادي 🚚</div>
       <div class="option-availability" id="normal-availability"></div>
       <div class="checkout-products" id="normal-products"></div>
       <button class="complete-btn" id="complete-normal" onclick="completeOrder('normal')">إتمام الطلب</button>
     </div>
     <div class="option-box">
-      <div class="option-title">⚡ شحن سريع</div>
+      <div class="option-title">شحن سريع ⚡</div>
       <div class="option-availability" id="fast-availability"></div>
       <div class="checkout-products" id="fast-products"></div>
       <button class="complete-btn" id="complete-fast" onclick="completeOrder('fast')">إتمام الطلب</button>
     </div>
     <div class="option-box">
-      <div class="option-title">🏪 استلام من المعرض</div>
+      <div class="option-title">استلام من المعرض 🏪</div>
       <div class="option-availability" id="store-availability"></div>
       <div class="checkout-products" id="store-products"></div>
       <div style="margin-top:8px;font-size:15px;">معرض حي الورود:
@@ -344,13 +358,11 @@ function renderCheckout() {
   // شحن سريع: إذا اخترت حي الورود وجميع المنتجات متوفرة في مخزن الورود فقط (غير متاح عند التخطي)
   let allowFast = !userSkipped && userDistrict === "حي الورود" && items.length>0 && items.every(p=>p.inStore);
   document.getElementById("fast-availability").innerHTML =
-    allowFast ? `${items.length} من ${items.length} من المنتجات متوفرة (حي الورود)` :
-    `شحن سريع متاح فقط إذا كانت كل المنتجات متوفرة في مخزن الورود`;
+    allowFast ? `${items.length} من ${items.length} من المنتجات متوفرة` : "";
   let fastProds = "";
   items.forEach(item => {
     fastProds += `<div style="margin-bottom:7px;">
       <span>${item.name}</span>
-      ${(!item.inStore && allowFast) ? `<span class="red-bar">غير متوفر للشحن السريع</span> <button class="remove-btn" onclick="removeCheckout(${item.id})">حذف</button>` : ""}
     </div>`;
   });
   document.getElementById("fast-products").innerHTML = fastProds;
@@ -365,7 +377,6 @@ function renderCheckout() {
   items.forEach(item => {
     storeProds += `<div style="margin-bottom:7px;">
       <span>${item.name}</span>
-      ${!item.inStore ? `<span class="red-bar">غير متوفر في معرض الورود</span> <button class="remove-btn" onclick="removeCheckout(${item.id})">حذف</button>` : ""}
     </div>`;
   });
   document.getElementById("store-products").innerHTML = storeProds;
@@ -373,8 +384,9 @@ function renderCheckout() {
     document.getElementById("store-status").innerHTML = `<span class="green">متوفر (${storeAvail})</span>`;
   else
     document.getElementById("store-status").innerHTML = `<span class="red">لا يوجد منتجات متوفرة</span>`;
-  // زر الإتمام للاستلام من المعرض: غير متاح عند التخطي
-  let allowStore = !userSkipped && ((items.length === 1 && items[0].inStore) || (items.length>1 && items.every(p=>p.inStore)));
+
+  // زر الإتمام للاستلام من المعرض: يجب أن تكون كل المنتجات في السلة متوفرة في الورود
+  let allowStore = !userSkipped && items.length > 0 && items.every(p=>p.inStore);
   document.getElementById("complete-store").className = allowStore ? "complete-btn" : "complete-btn disabled";
   document.getElementById("complete-store").disabled = !allowStore;
 }
