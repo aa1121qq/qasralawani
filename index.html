@@ -2,7 +2,7 @@
 <html lang="ar">
 <head>
   <meta charset="UTF-8">
-  <title>تحديد المدينة والحي والشارع تلقائيًا</title>
+  <title>تحديد المدينة والحي والشارع تلقائيًا (Google Maps)</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
   <style>
     body { background:#888; font-family: Tahoma, Arial; }
@@ -30,7 +30,7 @@
 </div>
 <div class="field">
   <label>اسم الشارع:</label>
-  <input id="street" type="text" readonly>
+  <input id="street" type="text" placeholder="اكتب اسم الشارع إذا لم يظهر تلقائيًا">
 </div>
 <button class="btn" onclick="openMap()">حدد موقعك على الخريطة</button>
 
@@ -49,11 +49,13 @@
 <script>
 let map, marker;
 
+// 🔑 ضع مفتاح Google Maps Geocoding API هنا:
+const GOOGLE_MAPS_API_KEY = "AIzaSyBZByJv1xc_9fvKfVjdcCfXWlhRcNM9_vE"; // ضع مفتاحك هنا
+
 function openMap() {
   document.getElementById('overlay').style.display = 'block';
   document.getElementById('map').style.display = 'block';
 
-  // Initialize map only once
   if (!map) {
     map = L.map('map').setView([24.7136, 46.6753], 12); // الرياض افتراضيًا
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -71,13 +73,29 @@ function setMarkerAndAddress(lat, lng, closeAfter=true) {
   marker = L.marker([lat, lng]).addTo(map);
   map.setView([lat, lng], 16);
 
-  fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=ar`)
+  // Google Maps Geocoding API
+  const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&language=ar&key=${GOOGLE_MAPS_API_KEY}`;
+  fetch(url)
     .then(response => response.json())
     .then(data => {
-      let address = data.address || {};
-      document.getElementById('city').value = address.city || address.town || address.village || "";
-      document.getElementById('district').value = address.suburb || address.neighbourhood || address.city_district || "";
-      document.getElementById('street').value = address.road || address.street || "";
+      let city = "";
+      let district = "";
+      let street = "";
+
+      if (data.results && data.results.length > 0) {
+        // نبحث في كل address_components ونستخرج المطلوب
+        let components = data.results[0].address_components;
+        components.forEach(comp => {
+          if (comp.types.includes("locality")) city = comp.long_name;
+          if (comp.types.includes("administrative_area_level_2") && !city) city = comp.long_name;
+          if (comp.types.includes("sublocality") || comp.types.includes("sublocality_level_1")) district = comp.long_name;
+          if (comp.types.includes("route")) street = comp.long_name;
+        });
+      }
+
+      document.getElementById('city').value = city;
+      document.getElementById('district').value = district;
+      document.getElementById('street').value = street;
       if(closeAfter) closeMap();
     });
 }
