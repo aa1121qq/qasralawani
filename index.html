@@ -2,7 +2,7 @@
 <html lang="ar">
 <head>
   <meta charset="UTF-8">
-  <title>تحديد الموقع مع بحث حي/مدينة | TomTom</title>
+  <title>تحديد الموقع مع اقتراحات بحث | TomTom</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
   <style>
@@ -52,12 +52,33 @@
     #map { height: 330px; width: 100%; margin-bottom: 6px; border-radius: 9px;}
     .search-bar {
       margin-bottom:8px; text-align:right; width:100%;
-      display:flex; gap:4px; flex-direction: row-reverse;
+      display:flex; gap:4px; flex-direction: row-reverse; position:relative;
     }
     #searchInput {
       flex:1; min-width:0; padding:8px; border-radius:4px;
       border:1px solid #aaa; font-size: 1em; direction: rtl;
     }
+    .suggestions {
+      background: #fff;
+      border: 1px solid #b8b8b8;
+      border-top: none;
+      max-height: 170px;
+      overflow-y: auto;
+      position: absolute;
+      right: 0; left: 0;
+      z-index: 1500;
+      top: 36px;
+      border-radius: 0 0 6px 6px;
+      box-shadow: 0 4px 16px 0 rgba(0,0,0,.10);
+    }
+    .suggestion-item {
+      padding: 10px 8px;
+      cursor: pointer;
+      border-bottom: 1px solid #f2f2f2;
+      text-align: right;
+    }
+    .suggestion-item:last-child { border-bottom: none; }
+    .suggestion-item:hover { background: #f2f7f4; }
     @media (max-width: 650px) {
       .container, #popup { width: 97vw; min-width: 0; max-width: 98vw; }
       #map { height: 250px; }
@@ -89,14 +110,14 @@
 
 <div id="overlay">
   <div id="popup">
-    <h3>اختر موقعك أو ابحث عن حي/مدينة</h3>
+    <h3>ابحث واختر الموقع ثم اضغط على الموقع الدقيق بالخريطة</h3>
     <div class="popup-buttons">
       <button class="btn" onclick="locateMe()">حدد موقعي الحالي</button>
       <button class="btn" onclick="closeMap()">إغلاق</button>
     </div>
-    <div class="search-bar">
-      <button class="btn" style="padding:8px 16px;" onclick="searchLocation()">بحث</button>
-      <input type="text" id="searchInput" placeholder="اكتب اسم مدينة أو حي...">
+    <div class="search-bar" style="position:relative;">
+      <input type="text" id="searchInput" placeholder="اكتب اسم مدينة أو حي..." autocomplete="off" oninput="suggestLocations()">
+      <div id="suggestions" class="suggestions" style="display:none"></div>
     </div>
     <div id="map"></div>
   </div>
@@ -126,7 +147,6 @@ function openMap() {
   }, 200);
 }
 
-// لا تعبي الحقول إلا بعد الضغط على الخريطة أو زر تحديد الموقع فقط
 function setMarkerAndAddress(lat, lng) {
   if (marker) map.removeLayer(marker);
   marker = L.marker([lat, lng]).addTo(map);
@@ -158,33 +178,49 @@ function locateMe() {
   }
 }
 
-// البحث عن الموقع بالحي أو المدينة فقط، دون تعبئة الحقول إلا بعد اختيار المستخدم للمكان الدقيق
-function searchLocation() {
+// ميزة الاقتراحات عند الكتابة
+let lastResults = [];
+function suggestLocations() {
   const query = document.getElementById('searchInput').value.trim();
-  if (!query) {
-    alert("يرجى كتابة اسم مدينة أو حي للبحث.");
-    return;
-  }
-  fetch(`https://api.tomtom.com/search/2/geocode/${encodeURIComponent(query)}.json?key=${TOMTOM_API_KEY}`)
+  const suggestionsBox = document.getElementById('suggestions');
+  suggestionsBox.innerHTML = "";
+  suggestionsBox.style.display = "none";
+  if (query.length < 2) return;
+  fetch(`https://api.tomtom.com/search/2/geocode/${encodeURIComponent(query)}.json?key=${TOMTOM_API_KEY}&limit=6`)
     .then(res => res.json())
     .then(data => {
       if (data.results && data.results.length > 0) {
-        const pos = data.results[0].position;
-        // فقط حرك الخريطة وضع العلامة (marker)
-        if (marker) map.removeLayer(marker);
-        marker = L.marker([pos.lat, pos.lon]).addTo(map);
-        map.setView([pos.lat, pos.lon], 15);
-        // لا تعبي الحقول هنا، انتظر ضغط المستخدم على الموقع الدقيق
-      } else {
-        alert("لم يتم العثور على الموقع.");
+        lastResults = data.results;
+        data.results.forEach((item, idx) => {
+          const div = document.createElement("div");
+          div.className = "suggestion-item";
+          div.textContent = item.address.freeformAddress;
+          div.onclick = () => selectSuggestion(idx);
+          suggestionsBox.appendChild(div);
+        });
+        suggestionsBox.style.display = "block";
       }
     });
+}
+
+// عند اختيار اقتراح من القائمة
+function selectSuggestion(idx) {
+  const pos = lastResults[idx].position;
+  if (marker) map.removeLayer(marker);
+  marker = L.marker([pos.lat, pos.lon]).addTo(map);
+  map.setView([pos.lat, pos.lon], 15);
+  // أخفِ الاقتراحات بعد الاختيار
+  document.getElementById('suggestions').style.display = "none";
+  document.getElementById('searchInput').value = lastResults[idx].address.freeformAddress;
+  // المستخدم يحدد بعدها الموقع الدقيق بالضغط على الخريطة
 }
 
 function closeMap() {
   document.getElementById('overlay').style.display = 'none';
   document.getElementById('map').style.display = 'none';
   if (marker) map.removeLayer(marker);
+  // أخفِ الاقتراحات إذا بقيت مفتوحة
+  document.getElementById('suggestions').style.display = "none";
 }
 </script>
 </body>
