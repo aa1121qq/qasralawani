@@ -2,19 +2,24 @@
 <html lang="ar">
 <head>
   <meta charset="UTF-8">
-  <title>تحديد المدينة والحي</title>
+  <title>تحديد المدينة والحي والشارع تلقائيًا</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
   <style>
+    body { background:#888; font-family: Tahoma, Arial; }
     #map { height: 400px; display:none; margin-bottom: 15px;}
     #overlay { position: fixed; left:0; top:0; width:100vw; height:100vh; background:rgba(0,0,0,0.5); display:none; z-index: 1000;}
-    #popup { background:white; padding:20px; border-radius:10px; width:450px; margin:80px auto; position:relative;}
+    #popup { background:white; padding:20px; border-radius:15px; width:470px; margin:80px auto; position:relative; box-shadow: 0 2px 20px rgba(0,0,0,.15);}
     .field { margin: 8px 0; }
-    .btn { padding:10px 20px; background:#2e8b57; color:white; border:none; border-radius:5px; cursor:pointer; }
+    .btn { padding:10px 20px; background:#2e8b57; color:white; border:none; border-radius:5px; cursor:pointer; margin:3px; }
+    input[type="text"] { width:210px; padding:8px; border-radius:4px; border:1px solid #aaa;}
+    h2, h3 { margin-top: 25px; }
+    #popup h3 { margin: 0 0 14px 0; text-align: right;}
+    .popup-buttons { text-align:right; margin-bottom:8px;}
   </style>
 </head>
 <body dir="rtl">
 
-<h2>تحديد المدينة والحي تلقائيًا</h2>
+<h2>تحديد المدينة والحي والشارع تلقائيًا</h2>
 <div class="field">
   <label>اسم المدينة:</label>
   <input id="city" type="text" readonly>
@@ -23,13 +28,20 @@
   <label>اسم الحي:</label>
   <input id="district" type="text" readonly>
 </div>
+<div class="field">
+  <label>اسم الشارع:</label>
+  <input id="street" type="text" readonly>
+</div>
 <button class="btn" onclick="openMap()">حدد موقعك على الخريطة</button>
 
 <div id="overlay">
   <div id="popup">
     <h3>اختر موقعك</h3>
+    <div class="popup-buttons">
+      <button class="btn" onclick="locateMe()">حدد موقعي الحالي</button>
+      <button class="btn" onclick="closeMap()">إغلاق</button>
+    </div>
     <div id="map"></div>
-    <button class="btn" onclick="closeMap()">إغلاق</button>
   </div>
 </div>
 
@@ -41,25 +53,44 @@ function openMap() {
   document.getElementById('overlay').style.display = 'block';
   document.getElementById('map').style.display = 'block';
 
+  // Initialize map only once
   if (!map) {
-    map = L.map('map').setView([24.7136, 46.6753], 10); // الرياض افتراضيًا
+    map = L.map('map').setView([24.7136, 46.6753], 12); // الرياض افتراضيًا
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
     }).addTo(map);
 
     map.on('click', function(e) {
-      if(marker) map.removeLayer(marker);
-      marker = L.marker(e.latlng).addTo(map);
-      // استدعاء API لتحويل الاحداثيات إلى اسم المدينة والحي
-      fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${e.latlng.lat}&lon=${e.latlng.lng}&accept-language=ar`)
-      .then(response => response.json())
-      .then(data => {
-        let address = data.address;
-        document.getElementById('city').value = address.city || address.town || address.village || "";
-        document.getElementById('district').value = address.suburb || address.neighbourhood || address.city_district || "";
-        closeMap();
-      });
+      setMarkerAndAddress(e.latlng.lat, e.latlng.lng, true);
     });
+  }
+}
+
+function setMarkerAndAddress(lat, lng, closeAfter=true) {
+  if(marker) map.removeLayer(marker);
+  marker = L.marker([lat, lng]).addTo(map);
+  map.setView([lat, lng], 16);
+
+  fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=ar`)
+    .then(response => response.json())
+    .then(data => {
+      let address = data.address || {};
+      document.getElementById('city').value = address.city || address.town || address.village || "";
+      document.getElementById('district').value = address.suburb || address.neighbourhood || address.city_district || "";
+      document.getElementById('street').value = address.road || address.street || "";
+      if(closeAfter) closeMap();
+    });
+}
+
+function locateMe() {
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(function(position) {
+      setMarkerAndAddress(position.coords.latitude, position.coords.longitude, true);
+    }, function(error) {
+      alert('تعذر الحصول على موقعك الحالي. الرجاء السماح للوصول للموقع من إعدادات المتصفح.');
+    });
+  } else {
+    alert('المتصفح لا يدعم تحديد الموقع الجغرافي.');
   }
 }
 
