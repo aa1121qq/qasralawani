@@ -2,67 +2,111 @@
 <html lang="ar">
 <head>
   <meta charset="UTF-8">
-  <title>TomTom Reverse Geocoding - بيانات أصلية</title>
+  <title>تحديد الموقع مع البحث | TomTom</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
   <style>
-    body { background:#888; font-family: Tahoma, Arial; }
-    #map { height: 400px; width: 100%; display:none; margin-bottom: 15px;}
+    body { 
+      background: #888; font-family: Tahoma, Arial; margin:0; padding:0; 
+      min-height: 100vh; 
+    }
+    .container {
+      max-width: 480px;
+      margin: 35px auto;
+      background: #fff;
+      padding: 18px 10px 30px 10px;
+      border-radius: 15px;
+      box-shadow: 0 2px 20px rgba(0,0,0,.12);
+    }
+    h2 { margin: 0 0 18px 0; font-size: 1.4em; text-align: right;}
+    .field { margin: 12px 0; text-align: right; }
+    .label { margin-left: 10px; font-weight: bold; }
+    input[type="text"] {
+      width: 88%;
+      padding: 9px;
+      border-radius: 4px;
+      border: 1px solid #aaa;
+      font-size: 1em;
+      margin-top: 5px;
+      background: #fafafa;
+      direction: rtl;
+    }
+    .btn {
+      padding:10px 18px; background:#2e8b57; color:white;
+      border:none; border-radius:5px; cursor:pointer; margin:6px 3px 0 3px;
+      font-size:1em;
+    }
+    .btn:active { background: #256944; }
+    #chooseBtn { width: 100%; margin: 14px 0 0 0; font-size: 1.12em;}
+    /* Popup styles */
     #overlay {
       position: fixed; left:0; top:0; width:100vw; height:100vh;
-      background:rgba(0,0,0,0.5); display:none; z-index: 1000;
+      background:rgba(0,0,0,0.4); display:none; z-index: 1000;
     }
     #popup {
-      background:white; padding:20px; border-radius:15px;
-      width:470px; margin:80px auto; position:relative;
-      box-shadow: 0 2px 20px rgba(0,0,0,.15);
+      background:white; padding:10px 8px 24px 8px; border-radius:13px;
+      max-width:96vw; width:380px; margin:45px auto; position:relative;
+      box-shadow: 0 2px 16px rgba(0,0,0,.11);
     }
-    .field { margin: 8px 0; }
-    .btn {
-      padding:10px 20px; background:#2e8b57; color:white;
-      border:none; border-radius:5px; cursor:pointer; margin:3px;
+    #popup h3 { margin: 5px 0 16px 0; text-align: right; font-size:1.16em;}
+    .popup-buttons { text-align:right; margin-bottom:7px; }
+    #map { height: 330px; width: 100%; margin-bottom: 6px; border-radius: 9px;}
+    .search-bar {
+      margin-bottom:8px; text-align:right; width:100%;
+      display:flex; gap:4px; flex-direction: row-reverse;
     }
-    input[type="text"] {
-      width:210px; padding:8px; border-radius:4px; border:1px solid #aaa;
+    #searchInput {
+      flex:1; min-width:0; padding:8px; border-radius:4px;
+      border:1px solid #aaa; font-size: 1em; direction: rtl;
     }
-    h2, h3 { margin-top: 25px; }
-    #popup h3 { margin: 0 0 14px 0; text-align: right;}
-    .popup-buttons { text-align:right; margin-bottom:8px;}
-    textarea { width:98%; min-height:80px; margin-top:8px; }
+    @media (max-width: 650px) {
+      .container, #popup { width: 97vw; min-width: 0; max-width: 98vw; }
+      #map { height: 250px; }
+    }
+    @media (max-width: 400px) {
+      .container, #popup { width: 99vw; }
+      #map { height: 170px; }
+    }
   </style>
 </head>
 <body dir="rtl">
 
-<h2>بيانات TomTom الأصلية</h2>
-<div class="field">
-  <label>المدينة (من TomTom):</label>
-  <input id="city" type="text" readonly>
+<div class="container">
+  <h2>تحديد المدينة والحي والشارع</h2>
+  <div class="field">
+    <span class="label">المدينة:</span>
+    <input id="city" type="text" readonly>
+  </div>
+  <div class="field">
+    <span class="label">الحي:</span>
+    <input id="district" type="text" readonly>
+  </div>
+  <div class="field">
+    <span class="label">الشارع:</span>
+    <input id="street" type="text" readonly>
+  </div>
+  <button class="btn" id="chooseBtn" onclick="openMap()">حدد موقعك على الخريطة</button>
 </div>
-<div class="field">
-  <label>الحي (من TomTom):</label>
-  <input id="district" type="text" readonly>
-</div>
-<div class="field">
-  <label>الشارع (من TomTom):</label>
-  <input id="street" type="text" readonly>
-</div>
-<button class="btn" onclick="openMap()">حدد موقعك على الخريطة</button>
 
 <div id="overlay">
   <div id="popup">
-    <h3>اختر موقعك</h3>
+    <h3>اختر موقعك أو ابحث مباشرة</h3>
     <div class="popup-buttons">
       <button class="btn" onclick="locateMe()">حدد موقعي الحالي</button>
       <button class="btn" onclick="closeMap()">إغلاق</button>
     </div>
+    <div class="search-bar">
+      <button class="btn" style="padding:8px 16px;" onclick="searchLocation()">بحث</button>
+      <input type="text" id="searchInput" placeholder="اكتب اسم مدينة أو حي أو شارع...">
+    </div>
     <div id="map"></div>
-    <textarea id="raw_address" readonly></textarea>
   </div>
 </div>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script>
 let map = null, marker = null;
-const TOMTOM_API_KEY = "5UrN1gCebJS4OwrY89BvUhyPzLO3QpvF"; // ضع مفتاح TomTom هنا
+const TOMTOM_API_KEY = "5UrN1gCebJS4OwrY89BvUhyPzLO3QpvF"; // ← ضع مفتاح TomTom هنا
 
 function openMap() {
   document.getElementById('overlay').style.display = 'block';
@@ -95,13 +139,10 @@ function setMarkerAndAddress(lat, lng) {
       if (data.addresses && data.addresses.length > 0 && data.addresses[0].address) {
         address = data.addresses[0].address;
       }
-      // عرض البيانات الأصلية فقط من TomTom بدون تحويل أو ترجمة
       document.getElementById('city').value = address.municipality || address.localName || address.city || "";
       document.getElementById('district').value = address.municipalitySubdivision || address.suburb || address.neighbourhood || "";
       document.getElementById('street').value = address.streetName || address.street || "";
-
-      // كل الرد كامل في textarea
-      document.getElementById('raw_address').value = JSON.stringify(address, null, 2);
+      closeMap();
     });
 }
 
@@ -117,9 +158,30 @@ function locateMe() {
   }
 }
 
+// البحث عن الموقع بالنص (مدينة، حي، شارع)
+function searchLocation() {
+  const query = document.getElementById('searchInput').value.trim();
+  if (!query) {
+    alert("يرجى كتابة اسم مدينة أو حي أو شارع للبحث.");
+    return;
+  }
+  fetch(`https://api.tomtom.com/search/2/geocode/${encodeURIComponent(query)}.json?key=${TOMTOM_API_KEY}`)
+    .then(res => res.json())
+    .then(data => {
+      if (data.results && data.results.length > 0) {
+        const pos = data.results[0].position;
+        setMarkerAndAddress(pos.lat, pos.lon);
+        map.setView([pos.lat, pos.lon], 16);
+      } else {
+        alert("لم يتم العثور على موقع مطابق.");
+      }
+    });
+}
+
 function closeMap() {
   document.getElementById('overlay').style.display = 'none';
   document.getElementById('map').style.display = 'none';
+  if (marker) map.removeLayer(marker);
 }
 </script>
 </body>
