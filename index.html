@@ -2,7 +2,7 @@
 <html lang="ar">
 <head>
   <meta charset="UTF-8">
-  <title>تحديد الموقع بخريطة Google والعنوان LocationIQ</title>
+  <title>تحديد الموقع عبر LocationIQ</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
   <style>
     body { background:#888; font-family: Tahoma, Arial; }
@@ -15,22 +15,23 @@
     h2, h3 { margin-top: 25px; }
     #popup h3 { margin: 0 0 14px 0; text-align: right;}
     .popup-buttons { text-align:right; margin-bottom:8px;}
+    textarea { width:98%; min-height:60px; margin-top:8px; }
   </style>
 </head>
 <body dir="rtl">
 
-<h2>تحديد المدينة والحي والشارع تلقائيًا</h2>
+<h2>تحديد المدينة والحي والشارع عبر LocationIQ</h2>
 <div class="field">
-  <label>اسم المدينة:</label>
+  <label>اسم المدينة (city):</label>
   <input id="city" type="text" readonly>
 </div>
 <div class="field">
-  <label>اسم الحي:</label>
+  <label>اسم الحي (suburb):</label>
   <input id="district" type="text" readonly>
 </div>
 <div class="field">
-  <label>اسم الشارع:</label>
-  <input id="street" type="text" placeholder="اكتب اسم الشارع إذا لم يظهر تلقائيًا">
+  <label>اسم الشارع (road):</label>
+  <input id="street" type="text" readonly>
 </div>
 <button class="btn" onclick="openMap()">حدد موقعك على الخريطة</button>
 
@@ -42,14 +43,14 @@
       <button class="btn" onclick="closeMap()">إغلاق</button>
     </div>
     <div id="map"></div>
+    <textarea id="raw_address" readonly style="display:none"></textarea>
   </div>
 </div>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script>
 let map, marker;
-// ضع توكن LocationIQ هنا
-const LOCATIONIQ_API_KEY = "pk.fcbfd5e9ad339a94f1821f22095ee3db";
+const LOCATIONIQ_API_KEY = "pk.fcbfd5e9ad339a94f1821f22095ee3db"; // ضع توكن LocationIQ هنا
 
 function openMap() {
   document.getElementById('overlay').style.display = 'block';
@@ -57,7 +58,7 @@ function openMap() {
 
   if (!map) {
     map = L.map('map').setView([24.7136, 46.6753], 12); // الرياض افتراضيًا
-    // خرائط Google للعرض
+    // عرض خرائط Google (أو استخدم OpenStreetMap مباشرة)
     L.tileLayer('https://mt1.google.com/vt/lyrs=r&x={x}&y={y}&z={z}', {
       maxZoom: 19,
       attribution: '© Google Maps'
@@ -74,14 +75,19 @@ function setMarkerAndAddress(lat, lng, closeAfter=true) {
   marker = L.marker([lat, lng]).addTo(map);
   map.setView([lat, lng], 16);
 
-  // استخدم LocationIQ للحصول على العنوان
   fetch(`https://eu1.locationiq.com/v1/reverse.php?key=${LOCATIONIQ_API_KEY}&lat=${lat}&lon=${lng}&format=json&accept-language=ar`)
     .then(res => res.json())
     .then(data => {
       let address = data.address || {};
-      document.getElementById('city').value = address.city || address.town || address.village || "";
-      document.getElementById('district').value = address.suburb || address.neighbourhood || address.city_district || "";
-      document.getElementById('street').value = address.road || address.street || "";
+      // عرض القيم كما هي بالضبط
+      document.getElementById('city').value = address.city || "";
+      document.getElementById('district').value = address.suburb || "";
+      document.getElementById('street').value = address.road || "";
+
+      // اختياري: لعرض كل حقول العنوان القادمة من LocationIQ
+      document.getElementById('raw_address').style.display = "block";
+      document.getElementById('raw_address').value = JSON.stringify(address, null, 2);
+
       if(closeAfter) closeMap();
     });
 }
@@ -101,6 +107,7 @@ function locateMe() {
 function closeMap() {
   document.getElementById('overlay').style.display = 'none';
   document.getElementById('map').style.display = 'none';
+  document.getElementById('raw_address').style.display = "none";
 }
 </script>
 </body>
