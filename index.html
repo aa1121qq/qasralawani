@@ -2,7 +2,7 @@
 <html lang="ar">
 <head>
   <meta charset="UTF-8">
-  <title>تحديد الموقع عبر LocationIQ</title>
+  <title>تحديد الموقع باستخدام Mapbox</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
   <style>
     body { background:#888; font-family: Tahoma, Arial; }
@@ -20,17 +20,17 @@
 </head>
 <body dir="rtl">
 
-<h2>تحديد المدينة والحي والشارع عبر LocationIQ</h2>
+<h2>تحديد المدينة والحي والشارع عبر Mapbox</h2>
 <div class="field">
-  <label>اسم المدينة (city):</label>
+  <label>اسم المدينة:</label>
   <input id="city" type="text" readonly>
 </div>
 <div class="field">
-  <label>اسم الحي (suburb):</label>
+  <label>اسم الحي:</label>
   <input id="district" type="text" readonly>
 </div>
 <div class="field">
-  <label>اسم الشارع (road):</label>
+  <label>اسم الشارع:</label>
   <input id="street" type="text" readonly>
 </div>
 <button class="btn" onclick="openMap()">حدد موقعك على الخريطة</button>
@@ -50,7 +50,7 @@
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script>
 let map, marker;
-const LOCATIONIQ_API_KEY = "pk.fcbfd5e9ad339a94f1821f22095ee3db"; // ضع توكن LocationIQ هنا
+const MAPBOX_TOKEN = "pk.eyJ1IjoicXNyYXdhbmkxMTIyMTEiLCJhIjoiY21iaHUzeWR3MDB0OTJucjBjcW9rMnptdCJ9.3CukVyxDoaVwG38RUQ8fQA"; // ضع التوكن الخاص بك هنا
 
 function openMap() {
   document.getElementById('overlay').style.display = 'block';
@@ -58,10 +58,10 @@ function openMap() {
 
   if (!map) {
     map = L.map('map').setView([24.7136, 46.6753], 12); // الرياض افتراضيًا
-    // عرض خرائط Google (أو استخدم OpenStreetMap مباشرة)
-    L.tileLayer('https://mt1.google.com/vt/lyrs=r&x={x}&y={y}&z={z}', {
+    // استخدم خرائط Mapbox للعرض (مجاني حتى 200,000 طلب tile)
+    L.tileLayer('https://api.mapbox.com/styles/v1/mapbox/streets-v11/tiles/{z}/{x}/{y}?access_token=' + MAPBOX_TOKEN, {
       maxZoom: 19,
-      attribution: '© Google Maps'
+      attribution: '© Mapbox'
     }).addTo(map);
 
     map.on('click', function(e) {
@@ -75,18 +75,29 @@ function setMarkerAndAddress(lat, lng, closeAfter=true) {
   marker = L.marker([lat, lng]).addTo(map);
   map.setView([lat, lng], 16);
 
-  fetch(`https://eu1.locationiq.com/v1/reverse.php?key=${LOCATIONIQ_API_KEY}&lat=${lat}&lon=${lng}&format=json&accept-language=ar`)
+  fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?language=ar&access_token=${MAPBOX_TOKEN}`)
     .then(res => res.json())
     .then(data => {
-      let address = data.address || {};
-      // عرض القيم كما هي بالضبط
-      document.getElementById('city').value = address.city || "";
-      document.getElementById('district').value = address.suburb || "";
-      document.getElementById('street').value = address.road || "";
+      // مبدئيًا: نضع القيم فاضية
+      let city = "", district = "", street = "";
+      if (data.features && data.features.length > 0) {
+        // استخرج اسم الشارع من أول feature (عادة يكون الشارع أو المكان الأقرب)
+        street = data.features[0].text_ar || data.features[0].text || "";
+        // السياق فيه المدينة والحي وغيرها
+        if (data.features[0].context) {
+          data.features[0].context.forEach(ctx => {
+            if (ctx.id.includes('place')) city = ctx.text_ar || ctx.text || city;
+            if (ctx.id.includes('locality') || ctx.id.includes('neighborhood') || ctx.id.includes('district')) district = ctx.text_ar || ctx.text || district;
+          });
+        }
+      }
+      document.getElementById('city').value = city;
+      document.getElementById('district').value = district;
+      document.getElementById('street').value = street;
 
-      // اختياري: لعرض كل حقول العنوان القادمة من LocationIQ
+      // اختياري: لعرض كل البيانات الراجعة
       document.getElementById('raw_address').style.display = "block";
-      document.getElementById('raw_address').value = JSON.stringify(address, null, 2);
+      document.getElementById('raw_address').value = JSON.stringify(data, null, 2);
 
       if(closeAfter) closeMap();
     });
