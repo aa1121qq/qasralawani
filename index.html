@@ -2,7 +2,7 @@
 <html lang="ar">
 <head>
   <meta charset="UTF-8">
-  <title>تحديد الموقع باستخدام TomTom</title>
+  <title>TomTom Reverse Geocoding</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
   <style>
     body { background:#888; font-family: Tahoma, Arial; }
@@ -68,7 +68,6 @@ function openMap() {
   document.getElementById('overlay').style.display = 'block';
   document.getElementById('map').style.display = 'block';
 
-  // إنشاء الخريطة فقط مرة واحدة
   setTimeout(function() {
     if (!map) {
       map = L.map('map').setView([24.7136, 46.6753], 12); // الرياض افتراضيًا
@@ -77,14 +76,14 @@ function openMap() {
       }).addTo(map);
 
       map.on('click', function(e) {
-        setMarkerAndAddress(e.latlng.lat, e.latlng.lng, true);
+        setMarkerAndAddress(e.latlng.lat, e.latlng.lng);
       });
     }
     map.invalidateSize();
-  }, 200); // تأخير بسيط لضمان ظهور العنصر
+  }, 200);
 }
 
-function setMarkerAndAddress(lat, lng, closeAfter=true) {
+function setMarkerAndAddress(lat, lng) {
   if (marker) map.removeLayer(marker);
   marker = L.marker([lat, lng]).addTo(map);
   map.setView([lat, lng], 16);
@@ -100,17 +99,16 @@ function setMarkerAndAddress(lat, lng, closeAfter=true) {
       document.getElementById('district').value = address.suburb || address.neighbourhood || "";
       document.getElementById('street').value = address.streetName || "";
 
+      // عرض بيانات العنوان الكاملة (اختياري)
       document.getElementById('raw_address').style.display = "block";
       document.getElementById('raw_address').value = JSON.stringify(address, null, 2);
-
-      if (closeAfter) closeMap();
     });
 }
 
 function locateMe() {
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(function(position) {
-      setMarkerAndAddress(position.coords.latitude, position.coords.longitude, true);
+      setMarkerAndAddress(position.coords.latitude, position.coords.longitude);
     }, function(error) {
       alert('تعذر الحصول على موقعك الحالي. الرجاء السماح للوصول للموقع من إعدادات المتصفح.');
     });
@@ -121,4 +119,9 @@ function locateMe() {
 
 function closeMap() {
   document.getElementById('overlay').style.display = 'none';
-  document.
+  document.getElementById('map').style.display = 'none';
+  document.getElementById('raw_address').style.display = "none";
+}
+</script>
+</body>
+</html>
