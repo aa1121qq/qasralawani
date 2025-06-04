@@ -2,7 +2,7 @@
 <html lang="ar">
 <head>
   <meta charset="UTF-8">
-  <title>تحديد الموقع مع البحث | TomTom</title>
+  <title>تحديد الموقع مع بحث حي/مدينة | TomTom</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
   <style>
@@ -38,7 +38,6 @@
     }
     .btn:active { background: #256944; }
     #chooseBtn { width: 100%; margin: 14px 0 0 0; font-size: 1.12em;}
-    /* Popup styles */
     #overlay {
       position: fixed; left:0; top:0; width:100vw; height:100vh;
       background:rgba(0,0,0,0.4); display:none; z-index: 1000;
@@ -90,14 +89,14 @@
 
 <div id="overlay">
   <div id="popup">
-    <h3>اختر موقعك أو ابحث مباشرة</h3>
+    <h3>اختر موقعك أو ابحث عن حي/مدينة</h3>
     <div class="popup-buttons">
       <button class="btn" onclick="locateMe()">حدد موقعي الحالي</button>
       <button class="btn" onclick="closeMap()">إغلاق</button>
     </div>
     <div class="search-bar">
       <button class="btn" style="padding:8px 16px;" onclick="searchLocation()">بحث</button>
-      <input type="text" id="searchInput" placeholder="اكتب اسم مدينة أو حي أو شارع...">
+      <input type="text" id="searchInput" placeholder="اكتب اسم مدينة أو حي...">
     </div>
     <div id="map"></div>
   </div>
@@ -127,6 +126,7 @@ function openMap() {
   }, 200);
 }
 
+// لا تعبي الحقول إلا بعد الضغط على الخريطة أو زر تحديد الموقع فقط
 function setMarkerAndAddress(lat, lng) {
   if (marker) map.removeLayer(marker);
   marker = L.marker([lat, lng]).addTo(map);
@@ -158,11 +158,11 @@ function locateMe() {
   }
 }
 
-// البحث عن الموقع بالنص (مدينة، حي، شارع)
+// البحث عن الموقع بالحي أو المدينة فقط، دون تعبئة الحقول إلا بعد اختيار المستخدم للمكان الدقيق
 function searchLocation() {
   const query = document.getElementById('searchInput').value.trim();
   if (!query) {
-    alert("يرجى كتابة اسم مدينة أو حي أو شارع للبحث.");
+    alert("يرجى كتابة اسم مدينة أو حي للبحث.");
     return;
   }
   fetch(`https://api.tomtom.com/search/2/geocode/${encodeURIComponent(query)}.json?key=${TOMTOM_API_KEY}`)
@@ -170,10 +170,13 @@ function searchLocation() {
     .then(data => {
       if (data.results && data.results.length > 0) {
         const pos = data.results[0].position;
-        setMarkerAndAddress(pos.lat, pos.lon);
-        map.setView([pos.lat, pos.lon], 16);
+        // فقط حرك الخريطة وضع العلامة (marker)
+        if (marker) map.removeLayer(marker);
+        marker = L.marker([pos.lat, pos.lon]).addTo(map);
+        map.setView([pos.lat, pos.lon], 15);
+        // لا تعبي الحقول هنا، انتظر ضغط المستخدم على الموقع الدقيق
       } else {
-        alert("لم يتم العثور على موقع مطابق.");
+        alert("لم يتم العثور على الموقع.");
       }
     });
 }
