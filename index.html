@@ -79,6 +79,16 @@
     }
     .suggestion-item:last-child { border-bottom: none; }
     .suggestion-item:hover { background: #f2f7f4; }
+    #confirmBtn {
+      display: none;
+      width: 96%;
+      margin: 16px 2% 0 2%;
+      font-size: 1.13em;
+      background: #007bff;
+      border-radius: 7px;
+      box-shadow: 0 1px 6px rgba(50,90,200,.07);
+      letter-spacing: 1px;
+    }
     @media (max-width: 650px) {
       .container, #popup { width: 97vw; min-width: 0; max-width: 98vw; }
       #map { height: 250px; }
@@ -120,56 +130,72 @@
       <div id="suggestions" class="suggestions" style="display:none"></div>
     </div>
     <div id="map"></div>
+    <button class="btn" id="confirmBtn" onclick="confirmLocation()">
+      <span style="font-size: 1.23em;">✔️</span> تأكيد الموقع
+    </button>
   </div>
 </div>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script>
-let map = null, marker = null;
+let map = null, marker = null, lastCoords = null, lastAddress = null;
 const TOMTOM_API_KEY = "5UrN1gCebJS4OwrY89BvUhyPzLO3QpvF"; // ← ضع مفتاح TomTom هنا
 
 function openMap() {
   document.getElementById('overlay').style.display = 'block';
   document.getElementById('map').style.display = 'block';
+  document.getElementById('confirmBtn').style.display = 'none';
 
   setTimeout(function() {
     if (!map) {
-      map = L.map('map').setView([24.7136, 46.6753], 12); // الرياض افتراضيًا
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      // طبقة شبيهة بقوقل (CartoDB Positron)
+      map = L.map('map').setView([24.7136, 46.6753], 12);
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
         maxZoom: 19,
+        attribution: '&copy; <a href="https://carto.com/">CARTO</a>'
       }).addTo(map);
 
       map.on('click', function(e) {
-        setMarkerAndAddress(e.latlng.lat, e.latlng.lng);
+        placeMarker(e.latlng.lat, e.latlng.lng, true);
       });
     }
     map.invalidateSize();
   }, 200);
 }
 
-function setMarkerAndAddress(lat, lng) {
+function placeMarker(lat, lng, showConfirm) {
   if (marker) map.removeLayer(marker);
   marker = L.marker([lat, lng]).addTo(map);
   map.setView([lat, lng], 16);
-
+  document.getElementById('confirmBtn').style.display = showConfirm ? 'block' : 'none';
+  lastCoords = {lat, lng};
+  // جلب العنوان فورًا وحفظه لاستخدامه عند التأكيد
   fetch(`https://api.tomtom.com/search/2/reverseGeocode/${lat},${lng}.json?key=${TOMTOM_API_KEY}`)
     .then(res => res.json())
     .then(data => {
-      let address = {};
+      lastAddress = {};
       if (data.addresses && data.addresses.length > 0 && data.addresses[0].address) {
-        address = data.addresses[0].address;
+        lastAddress = data.addresses[0].address;
       }
-      document.getElementById('city').value = address.municipality || address.localName || address.city || "";
-      document.getElementById('district').value = address.municipalitySubdivision || address.suburb || address.neighbourhood || "";
-      document.getElementById('street').value = address.streetName || address.street || "";
-      closeMap();
     });
+}
+
+function setMarkerAndAddress(lat, lng) {
+  placeMarker(lat, lng, true);
+}
+
+function confirmLocation() {
+  if (!lastAddress) return;
+  document.getElementById('city').value = lastAddress.municipality || lastAddress.localName || lastAddress.city || "";
+  document.getElementById('district').value = lastAddress.municipalitySubdivision || lastAddress.suburb || lastAddress.neighbourhood || "";
+  document.getElementById('street').value = lastAddress.streetName || lastAddress.street || "";
+  closeMap();
 }
 
 function locateMe() {
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(function(position) {
-      setMarkerAndAddress(position.coords.latitude, position.coords.longitude);
+      placeMarker(position.coords.latitude, position.coords.longitude, true);
     }, function(error) {
       alert('تعذر الحصول على موقعك الحالي. الرجاء السماح للوصول للموقع من إعدادات المتصفح.');
     });
@@ -206,20 +232,16 @@ function suggestLocations() {
 // عند اختيار اقتراح من القائمة
 function selectSuggestion(idx) {
   const pos = lastResults[idx].position;
-  if (marker) map.removeLayer(marker);
-  marker = L.marker([pos.lat, pos.lon]).addTo(map);
-  map.setView([pos.lat, pos.lon], 15);
-  // أخفِ الاقتراحات بعد الاختيار
+  placeMarker(pos.lat, pos.lon, true);
   document.getElementById('suggestions').style.display = "none";
   document.getElementById('searchInput').value = lastResults[idx].address.freeformAddress;
-  // المستخدم يحدد بعدها الموقع الدقيق بالضغط على الخريطة
 }
 
 function closeMap() {
   document.getElementById('overlay').style.display = 'none';
   document.getElementById('map').style.display = 'none';
   if (marker) map.removeLayer(marker);
-  // أخفِ الاقتراحات إذا بقيت مفتوحة
+  document.getElementById('confirmBtn').style.display = 'none';
   document.getElementById('suggestions').style.display = "none";
 }
 </script>
