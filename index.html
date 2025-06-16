@@ -1,249 +1,129 @@
 <!DOCTYPE html>
-<html lang="ar">
+<html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <title>تحديد الموقع مع اقتراحات بحث | TomTom</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+  <title>متجر الكتروني بسيط</title>
   <style>
-    body { 
-      background: #888; font-family: Tahoma, Arial; margin:0; padding:0; 
-      min-height: 100vh; 
-    }
-    .container {
-      max-width: 480px;
-      margin: 35px auto;
-      background: #fff;
-      padding: 18px 10px 30px 10px;
-      border-radius: 15px;
-      box-shadow: 0 2px 20px rgba(0,0,0,.12);
-    }
-    h2 { margin: 0 0 18px 0; font-size: 1.4em; text-align: right;}
-    .field { margin: 12px 0; text-align: right; }
-    .label { margin-left: 10px; font-weight: bold; }
-    input[type="text"] {
-      width: 88%;
-      padding: 9px;
-      border-radius: 4px;
-      border: 1px solid #aaa;
-      font-size: 1em;
-      margin-top: 5px;
-      background: #fafafa;
-      direction: rtl;
-    }
-    .btn {
-      padding:10px 18px; background:#2e8b57; color:white;
-      border:none; border-radius:5px; cursor:pointer; margin:6px 3px 0 3px;
-      font-size:1em;
-    }
-    .btn:active { background: #256944; }
-    #chooseBtn { width: 100%; margin: 14px 0 0 0; font-size: 1.12em;}
-    #overlay {
-      position: fixed; left:0; top:0; width:100vw; height:100vh;
-      background:rgba(0,0,0,0.4); display:none; z-index: 1000;
-    }
-    #popup {
-      background:white; padding:10px 8px 24px 8px; border-radius:13px;
-      max-width:96vw; width:380px; margin:45px auto; position:relative;
-      box-shadow: 0 2px 16px rgba(0,0,0,.11);
-    }
-    #popup h3 { margin: 5px 0 16px 0; text-align: right; font-size:1.16em;}
-    .popup-buttons { text-align:right; margin-bottom:7px; }
-    #map { height: 330px; width: 100%; margin-bottom: 6px; border-radius: 9px;}
-    .search-bar {
-      margin-bottom:8px; text-align:right; width:100%;
-      display:flex; gap:4px; flex-direction: row-reverse; position:relative;
-    }
-    #searchInput {
-      flex:1; min-width:0; padding:8px; border-radius:4px;
-      border:1px solid #aaa; font-size: 1em; direction: rtl;
-    }
-    .suggestions {
-      background: #fff;
-      border: 1px solid #b8b8b8;
-      border-top: none;
-      max-height: 170px;
-      overflow-y: auto;
-      position: absolute;
-      right: 0; left: 0;
-      z-index: 1500;
-      top: 36px;
-      border-radius: 0 0 6px 6px;
-      box-shadow: 0 4px 16px 0 rgba(0,0,0,.10);
-    }
-    .suggestion-item {
-      padding: 10px 8px;
-      cursor: pointer;
-      border-bottom: 1px solid #f2f2f2;
-      text-align: right;
-    }
-    .suggestion-item:last-child { border-bottom: none; }
-    .suggestion-item:hover { background: #f2f7f4; }
-    #confirmBtn {
-      display: none;
-      width: 96%;
-      margin: 16px 2% 0 2%;
-      font-size: 1.13em;
-      background: #007bff;
-      border-radius: 7px;
-      box-shadow: 0 1px 6px rgba(50,90,200,.07);
-      letter-spacing: 1px;
-    }
-    @media (max-width: 650px) {
-      .container, #popup { width: 97vw; min-width: 0; max-width: 98vw; }
-      #map { height: 250px; }
-    }
-    @media (max-width: 400px) {
-      .container, #popup { width: 99vw; }
-      #map { height: 170px; }
-    }
+    body { font-family: Tahoma, Arial; background: #f6f8fb; margin: 0; }
+    .popup-bg { position:fixed; inset:0; background:#0005; display:flex; align-items:center; justify-content:center; z-index:10;}
+    .popup { background:#fff; padding:2em 1.5em; border-radius:16px; box-shadow:0 2px 12px #0003; min-width:250px; text-align:center; }
+    .products { display: grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap: 2em; margin: 2em; }
+    .card { background: #fff; border-radius: 18px; box-shadow: 0 1px 8px #0002; padding: 1em; display: flex; flex-direction: column; align-items: center; position: relative; }
+    .card img { width: 120px; height: 120px; object-fit: contain; border-radius:12px; }
+    .card .fast { position:absolute; top:14px; left:14px; background:#28d47b; color:#fff; padding: 3px 10px; border-radius:12px; font-size: 0.88em; }
+    .card .unavailable { opacity:0.45; filter: grayscale(1); }
+    .add-btn { margin-top:8px; padding: 6px 20px; background: #076aff; color:#fff; border:none; border-radius: 10px; cursor:pointer; font-size: 1em; }
+    .add-btn:disabled { background:#bbb; cursor:not-allowed; }
+    h1 { text-align:center; color:#333 }
   </style>
 </head>
-<body dir="rtl">
-
-<div class="container">
-  <h2>تحديد المدينة والحي والشارع</h2>
-  <div class="field">
-    <span class="label">المدينة:</span>
-    <input id="city" type="text" readonly>
-  </div>
-  <div class="field">
-    <span class="label">الحي:</span>
-    <input id="district" type="text" readonly>
-  </div>
-  <div class="field">
-    <span class="label">الشارع:</span>
-    <input id="street" type="text" readonly>
-  </div>
-  <button class="btn" id="chooseBtn" onclick="openMap()">حدد موقعك على الخريطة</button>
-</div>
-
-<div id="overlay">
-  <div id="popup">
-    <h3>ابحث واختر الموقع ثم اضغط على الموقع الدقيق بالخريطة</h3>
-    <div class="popup-buttons">
-      <button class="btn" onclick="locateMe()">حدد موقعي الحالي</button>
-      <button class="btn" onclick="closeMap()">إغلاق</button>
+<body>
+  <h1>متجر الأدوات المنزلية</h1>
+  
+  <!-- البوب أب -->
+  <div id="popup" class="popup-bg">
+    <div class="popup">
+      <h2>حدد موقعك</h2>
+      <select id="citySelect">
+        <option value="الرياض">الرياض</option>
+      </select>
+      <br><br>
+      <select id="areaSelect">
+        <option value="حي السويدي">حي السويدي</option>
+      </select>
+      <br><br>
+      <button onclick="chooseLocation()">اختيار</button>
+      <button onclick="skipLocation()" style="background:#eee;color:#444;margin-right:10px">تخطي</button>
     </div>
-    <div class="search-bar" style="position:relative;">
-      <input type="text" id="searchInput" placeholder="اكتب اسم مدينة أو حي..." autocomplete="off" oninput="suggestLocations()">
-      <div id="suggestions" class="suggestions" style="display:none"></div>
-    </div>
-    <div id="map"></div>
-    <button class="btn" id="confirmBtn" onclick="confirmLocation()">
-      <span style="font-size: 1.23em;">✔️</span> تأكيد الموقع
-    </button>
   </div>
-</div>
+  
+  <!-- قائمة المنتجات -->
+  <div class="products" id="productsList"></div>
 
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-<script>
-let map = null, marker = null, lastCoords = null, lastAddress = null;
-const TOMTOM_API_KEY = "5UrN1gCebJS4OwrY89BvUhyPzLO3QpvF"; // ← ضع مفتاح TomTom هنا
+  <script>
+    // بيانات المنتجات (مأخوذة من ملفك)
+    const products = [
+      {
+        title: "طقم اكواب شاي",
+        img: "https://imgs.qasralawani.net/media/catalog/product/8/1/8105-27.jpg",
+        price: 18,
+        suwaidi: "متوفر",
+        store: "غير متوفر"
+      },
+      {
+        title: "قدر ضغط السيف استيل 5 لتر",
+        img: "https://imgs.qasralawani.net/media/catalog/product/9/0/9002-5sl.jpg",
+        price: 159,
+        suwaidi: "متوفر",
+        store: "غر متوفر"
+      },
+      {
+        title: "حافظة طعام إستيل 5 لتر",
+        img: "https://imgs.qasralawani.net/media/catalog/product/b/1/b18hp2-50g.jpg",
+        price: 359,
+        suwaidi: "غير متوفر",
+        store: "متوفر"
+      },
+      {
+        title: "حافظة طعام إستيل 2 لتر",
+        img: "https://imgs.qasralawani.net/media/catalog/product/b/1/b18hp3-20g.jpg",
+        price: 249,
+        suwaidi: "غير متوفر",
+        store: "متوفر"
+      }
+    ];
+    
+    let mode = null; // "suwaidi" | "skip"
+    
+    function chooseLocation() {
+      mode = "suwaidi";
+      document.getElementById('popup').style.display = 'none';
+      showProducts();
+    }
+    function skipLocation() {
+      mode = "skip";
+      document.getElementById('popup').style.display = 'none';
+      showProducts();
+    }
 
-function openMap() {
-  document.getElementById('overlay').style.display = 'block';
-  document.getElementById('map').style.display = 'block';
-  document.getElementById('confirmBtn').style.display = 'none';
-
-  setTimeout(function() {
-    if (!map) {
-      // طبقة شبيهة بقوقل (CartoDB Positron)
-      map = L.map('map').setView([24.7136, 46.6753], 12);
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-        maxZoom: 19,
-        attribution: '&copy; <a href="https://carto.com/">CARTO</a>'
-      }).addTo(map);
-
-      map.on('click', function(e) {
-        placeMarker(e.latlng.lat, e.latlng.lng, true);
+    function showProducts() {
+      const list = document.getElementById('productsList');
+      list.innerHTML = '';
+      products.forEach(product => {
+        // وضع المنطق حسب اختيار الموقع
+        let available = false, fast = false, disableBtn = false;
+        if (mode === "suwaidi") {
+          if (product.suwaidi.trim() === "متوفر") {
+            available = true;
+            fast = true; // تاق شحن سريع
+          } else if (product.store.trim() === "متوفر") {
+            available = true;
+            fast = false;
+          } else {
+            available = false;
+            disableBtn = true;
+          }
+        } else if (mode === "skip") {
+          if (product.store.trim() === "متوفر") {
+            available = true;
+            fast = false;
+          } else {
+            available = false;
+            disableBtn = true;
+          }
+        }
+        
+        list.innerHTML += `
+          <div class="card${!available ? " unavailable" : ""}">
+            ${fast ? `<div class="fast">شحن سريع</div>` : ""}
+            <img src="${product.img}" alt="${product.title}">
+            <h3>${product.title}</h3>
+            <div style="margin:6px 0 12px 0; font-weight:bold">${product.price} ريال</div>
+            <button class="add-btn" ${disableBtn ? "disabled" : ""}>${available ? "أضف للسلة" : "غير متوفر"}</button>
+          </div>
+        `;
       });
     }
-    map.invalidateSize();
-  }, 200);
-}
-
-function placeMarker(lat, lng, showConfirm) {
-  if (marker) map.removeLayer(marker);
-  marker = L.marker([lat, lng]).addTo(map);
-  map.setView([lat, lng], 16);
-  document.getElementById('confirmBtn').style.display = showConfirm ? 'block' : 'none';
-  lastCoords = {lat, lng};
-  // جلب العنوان فورًا وحفظه لاستخدامه عند التأكيد
-  fetch(`https://api.tomtom.com/search/2/reverseGeocode/${lat},${lng}.json?key=${TOMTOM_API_KEY}`)
-    .then(res => res.json())
-    .then(data => {
-      lastAddress = {};
-      if (data.addresses && data.addresses.length > 0 && data.addresses[0].address) {
-        lastAddress = data.addresses[0].address;
-      }
-    });
-}
-
-function setMarkerAndAddress(lat, lng) {
-  placeMarker(lat, lng, true);
-}
-
-function confirmLocation() {
-  if (!lastAddress) return;
-  document.getElementById('city').value = lastAddress.municipality || lastAddress.localName || lastAddress.city || "";
-  document.getElementById('district').value = lastAddress.municipalitySubdivision || lastAddress.suburb || lastAddress.neighbourhood || "";
-  document.getElementById('street').value = lastAddress.streetName || lastAddress.street || "";
-  closeMap();
-}
-
-function locateMe() {
-  if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(function(position) {
-      placeMarker(position.coords.latitude, position.coords.longitude, true);
-    }, function(error) {
-      alert('تعذر الحصول على موقعك الحالي. الرجاء السماح للوصول للموقع من إعدادات المتصفح.');
-    });
-  } else {
-    alert('المتصفح لا يدعم تحديد الموقع الجغرافي.');
-  }
-}
-
-// ميزة الاقتراحات عند الكتابة
-let lastResults = [];
-function suggestLocations() {
-  const query = document.getElementById('searchInput').value.trim();
-  const suggestionsBox = document.getElementById('suggestions');
-  suggestionsBox.innerHTML = "";
-  suggestionsBox.style.display = "none";
-  if (query.length < 2) return;
-  fetch(`https://api.tomtom.com/search/2/geocode/${encodeURIComponent(query)}.json?key=${TOMTOM_API_KEY}&limit=6`)
-    .then(res => res.json())
-    .then(data => {
-      if (data.results && data.results.length > 0) {
-        lastResults = data.results;
-        data.results.forEach((item, idx) => {
-          const div = document.createElement("div");
-          div.className = "suggestion-item";
-          div.textContent = item.address.freeformAddress;
-          div.onclick = () => selectSuggestion(idx);
-          suggestionsBox.appendChild(div);
-        });
-        suggestionsBox.style.display = "block";
-      }
-    });
-}
-
-// عند اختيار اقتراح من القائمة
-function selectSuggestion(idx) {
-  const pos = lastResults[idx].position;
-  placeMarker(pos.lat, pos.lon, true);
-  document.getElementById('suggestions').style.display = "none";
-  document.getElementById('searchInput').value = lastResults[idx].address.freeformAddress;
-}
-
-function closeMap() {
-  document.getElementById('overlay').style.display = 'none';
-  document.getElementById('map').style.display = 'none';
-  if (marker) map.removeLayer(marker);
-  document.getElementById('confirmBtn').style.display = 'none';
-  document.getElementById('suggestions').style.display = "none";
-}
-</script>
+  </script>
 </body>
 </html>
