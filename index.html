@@ -130,46 +130,47 @@
       document.getElementById('popup').style.display = 'none';
       showProducts();
     }
-    function showProducts() {
-      document.getElementById('checkoutPage').style.display = "none";
-      document.getElementById('productsList').style.display = "grid";
-      const list = document.getElementById('productsList');
-      list.innerHTML = '';
-      products.forEach(product => {
-        let available = false, fast = false, disableBtn = false, unavailableMsg = "";
-        if (mode === "suwaidi") {
-          if (product.suwaidi.trim() === "متوفر") {
-            available = true; fast = true;
-          } else if (product.store.trim().includes("متوفر")) {
-            available = true; fast = false;
-          } else {
-            available = false; disableBtn = true;
-          }
-        } else if (mode === "skip") {
-          // المنطق المصحح: المنتجات تظهر كلها، لكن فقط المتوفرة في المتجر الالكتروني قابلة للإضافة للسلة
-          if (product.store.trim().includes("متوفر")) {
-            available = true; fast = false;
-          } else {
-            available = false; disableBtn = true;
-            unavailableMsg = `<div style="color:#e14c1e;font-size:.92em;margin-top:4px;">غير متوفر للطلب أونلاين</div>`;
-          }
-        }
-        const inCart = cart.find(item => item.id === product.id);
-        list.innerHTML += `
-          <div class="card${!available ? " unavailable" : ""}">
-            ${fast ? `<div class="fast">شحن سريع</div>` : ""}
-            <img src="${product.img}" alt="${product.title}">
-            <h3>${product.title}</h3>
-            <div style="margin:7px 0 14px 0; font-weight:bold">${product.price} ريال</div>
-            <button class="add-btn" ${disableBtn || inCart ? "disabled" : ""} onclick="addToCart(${product.id})">
-              ${inCart ? "تمت الإضافة" : available ? "أضف للسلة" : "غير متوفر"}
-            </button>
-            ${unavailableMsg}
-          </div>
-        `;
-      });
-      showCartFooter();
+  function showProducts() {
+  document.getElementById('checkoutPage').style.display = "none";
+  document.getElementById('productsList').style.display = "grid";
+  const list = document.getElementById('productsList');
+  list.innerHTML = '';
+  products.forEach(product => {
+    let available = false, fast = false, disableBtn = false, unavailableMsg = "";
+    if (mode === "suwaidi") {
+      if (product.suwaidi.trim() === "متوفر") {
+        available = true; fast = true;
+      } else if (product.store.trim() === "متوفر") {
+        available = true; fast = false;
+      } else {
+        available = false; disableBtn = true;
+      }
+    } else if (mode === "skip") {
+      // فقط المنتجات المتوفرة في المتجر الالكتروني متاحة للشراء
+      if (product.store.trim() === "متوفر") {
+        available = true; fast = false;
+      } else {
+        available = false; disableBtn = true;
+        unavailableMsg = `<div style="color:#e14c1e;font-size:.92em;margin-top:4px;">غير متوفر للطلب أونلاين</div>`;
+      }
     }
+    const inCart = cart.find(item => item.id === product.id);
+    list.innerHTML += `
+      <div class="card${!available ? " unavailable" : ""}">
+        ${mode === "suwaidi" && fast ? `<div class="fast">شحن سريع</div>` : ""}
+        <img src="${product.img}" alt="${product.title}">
+        <h3>${product.title}</h3>
+        <div style="margin:7px 0 14px 0; font-weight:bold">${product.price} ريال</div>
+        <button class="add-btn" ${disableBtn || inCart ? "disabled" : ""} onclick="addToCart(${product.id})">
+          ${inCart ? "تمت الإضافة" : available ? "أضف للسلة" : "غير متوفر"}
+        </button>
+        ${unavailableMsg}
+      </div>
+    `;
+  });
+  showCartFooter();
+}
+
     function addToCart(productId) {
       const product = products.find(p => p.id === productId);
       if (!cart.find(item => item.id === productId)) {
