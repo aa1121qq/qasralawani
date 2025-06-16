@@ -2,48 +2,239 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <title>متجر الكتروني بسيط</title>
+  <title>متجر الأدوات المنزلية</title>
   <style>
-    body { font-family: Tahoma, Arial; background: #f6f8fb; margin: 0; }
-    .popup-bg { position:fixed; inset:0; background:#0005; display:flex; align-items:center; justify-content:center; z-index:10;}
-    .popup { background:#fff; padding:2em 1.5em; border-radius:16px; box-shadow:0 2px 12px #0003; min-width:250px; text-align:center; }
-    .products { display: grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap: 2em; margin: 2em; }
-    .card { background: #fff; border-radius: 18px; box-shadow: 0 1px 8px #0002; padding: 1em; display: flex; flex-direction: column; align-items: center; position: relative; }
-    .card img { width: 120px; height: 120px; object-fit: contain; border-radius:12px; }
-    .card .fast { position:absolute; top:14px; left:14px; background:#28d47b; color:#fff; padding: 3px 10px; border-radius:12px; font-size: 0.88em; }
-    .card .unavailable { opacity:0.45; filter: grayscale(1); }
-    .add-btn { margin-top:8px; padding: 6px 20px; background: #076aff; color:#fff; border:none; border-radius: 10px; cursor:pointer; font-size: 1em; }
-    .add-btn:disabled { background:#bbb; cursor:not-allowed; }
-    h1 { text-align:center; color:#333 }
+    body {
+      font-family: 'Cairo', Tahoma, Arial, sans-serif;
+      margin: 0;
+      background: #f5f7fa;
+    }
+    h1 {
+      text-align: center;
+      margin-top: 24px;
+      color: #222b45;
+      letter-spacing: 1px;
+      font-size: 2.2em;
+    }
+    .popup-bg {
+      position:fixed; inset:0; background:#0006; display:flex; align-items:center; justify-content:center; z-index:20;
+      animation:fade-in .5s;
+    }
+    @keyframes fade-in { from{opacity:0} to{opacity:1} }
+    .popup {
+      background:#fff;
+      min-width:330px;
+      border-radius:20px;
+      box-shadow:0 4px 18px #0001;
+      padding:2em 2.3em;
+      text-align:center;
+      animation:popup-appear .6s cubic-bezier(.33,2,.4,1);
+    }
+    @keyframes popup-appear { from{transform:scale(.9); opacity:0} to{transform:scale(1); opacity:1} }
+    .popup select, .popup button {
+      margin-top: 12px;
+      font-size: 1.06em;
+      padding: 8px 20px;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      background: #f7f7f7;
+      color: #3a3a3a;
+      outline: none;
+      transition: border .15s;
+    }
+    .popup button {
+      background: #076aff;
+      color: #fff;
+      border:none;
+      margin: 0 7px;
+      cursor: pointer;
+      font-weight: 500;
+      min-width: 80px;
+    }
+    .popup button.secondary { background: #eee; color: #222; border: 1px solid #bbb; }
+    .products {
+      display: grid;
+      grid-template-columns: repeat(auto-fit,minmax(250px,1fr));
+      gap: 1.7em;
+      margin: 2.4em 5vw;
+    }
+    .card {
+      background: #fff;
+      border-radius: 20px;
+      box-shadow: 0 2px 10px #0001;
+      padding: 1.3em 1.1em;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+      min-height: 340px;
+      transition: box-shadow .18s;
+    }
+    .card:hover { box-shadow:0 5px 22px #0001; }
+    .card img {
+      width: 120px; height: 120px;
+      object-fit: contain;
+      border-radius:15px;
+      margin-bottom: 10px;
+      background: #f2f2f2;
+    }
+    .card .fast {
+      position: absolute;
+      top: 16px; left: 16px;
+      background: linear-gradient(90deg,#22c55e 65%,#38bdf8 90%);
+      color: #fff;
+      padding: 4px 16px 4px 12px;
+      border-radius:14px;
+      font-size: 0.94em;
+      font-weight: 600;
+      box-shadow:0 2px 8px #3ae68a11;
+      letter-spacing: 1px;
+    }
+    .card .unavailable {
+      opacity:0.4; filter: grayscale(1);
+    }
+    .add-btn {
+      margin-top: 12px;
+      padding: 9px 35px;
+      background: #076aff;
+      color:#fff;
+      border:none;
+      border-radius: 11px;
+      font-size: 1.09em;
+      font-weight: bold;
+      letter-spacing: .5px;
+      cursor:pointer;
+      transition: background .17s;
+      box-shadow:0 1px 6px #2763c022;
+    }
+    .add-btn:disabled {
+      background:#c7c7c7; color: #787878; cursor:not-allowed; font-weight: normal;
+    }
+    .cart-box {
+      background: #fff;
+      border-radius: 16px;
+      margin: 20px auto 12px auto;
+      max-width: 800px;
+      box-shadow: 0 2px 14px #7db6ff19;
+      padding: 1em 2em 1em 2em;
+      display: flex;
+      flex-direction: column;
+    }
+    .cart-title {
+      font-size: 1.15em; font-weight:600; margin-bottom: 7px; color:#374151;
+    }
+    .cart-items {
+      display:flex; flex-wrap:wrap; gap:18px;
+    }
+    .cart-item {
+      background: #f8fafc;
+      border-radius: 12px;
+      display:flex; align-items:center;
+      padding: 6px 18px;
+      font-size: 1em;
+    }
+    .cart-item img { width:34px; height:34px; margin-left:7px; border-radius:7px;}
+    .cart-item .remove {
+      background:#f05252;
+      color:#fff;
+      border:none;
+      border-radius:7px;
+      margin-right:10px;
+      font-size:.97em;
+      cursor:pointer;
+      padding:3px 9px;
+    }
+    .cart-summary { margin-top:8px; font-size:1.09em; font-weight:bold;}
+    .checkout-btn {
+      margin-top: 16px;
+      background: #22c55e;
+      color:#fff;
+      font-size: 1.16em;
+      font-weight: bold;
+      border:none;
+      border-radius:10px;
+      padding: 10px 35px;
+      cursor:pointer;
+      box-shadow:0 2px 7px #14cc4e15;
+      transition: background .16s;
+    }
+    .checkout-btn:disabled { background: #c7c7c7; color: #787878; cursor:not-allowed;}
+    /* شحن/استلام من المعرض */
+    .checkout-modal-bg {
+      position:fixed; inset:0; background:#0006; display:flex; align-items:center; justify-content:center; z-index:40;
+      animation:fade-in .4s;
+    }
+    .checkout-modal {
+      background:#fff;
+      min-width:340px;
+      border-radius:17px;
+      box-shadow:0 8px 32px #0741ff18;
+      padding:2em 2em 1.5em 2em;
+      text-align:center;
+      animation:popup-appear .4s cubic-bezier(.33,2,.4,1);
+      max-width:95vw;
+    }
+    .checkout-modal h2 { font-size:1.27em; margin-bottom:0.7em;}
+    .option-btn {
+      padding: 8px 20px; font-size: 1.1em; border-radius:8px; margin:10px; border:none; cursor:pointer;
+      font-weight:500; transition: background .18s;
+    }
+    .option-btn.delivery { background:#1d68fd; color:#fff;}
+    .option-btn.pickup { background:#22c55e; color:#fff;}
+    .product-branch-status {
+      margin: 14px 0 0 0;
+      text-align: right;
+    }
+    .product-branch-status span {
+      font-weight: 500;
+      padding: 3px 14px;
+      border-radius: 8px;
+      margin-right: 5px;
+      font-size: .96em;
+    }
+    .branch-ok { background: #e6faee; color:#20b84a;}
+    .branch-err { background: #ffeaea; color:#ff1e1e;}
   </style>
 </head>
 <body>
   <h1>متجر الأدوات المنزلية</h1>
   
-  <!-- البوب أب -->
+  <!-- Popup لاختيار الموقع -->
   <div id="popup" class="popup-bg">
     <div class="popup">
       <h2>حدد موقعك</h2>
-      <select id="citySelect">
-        <option value="الرياض">الرياض</option>
+      <select id="citySelect" autocomplete="off">
+        <option value="الرياض" selected>الرياض</option>
       </select>
-      <br><br>
-      <select id="areaSelect">
-        <option value="حي السويدي">حي السويدي</option>
+      <br>
+      <select id="areaSelect" autocomplete="off">
+        <option value="حي السويدي" selected>حي السويدي</option>
       </select>
-      <br><br>
+      <br>
       <button onclick="chooseLocation()">اختيار</button>
-      <button onclick="skipLocation()" style="background:#eee;color:#444;margin-right:10px">تخطي</button>
+      <button class="secondary" onclick="skipLocation()">تخطي</button>
     </div>
   </div>
-  
-  <!-- قائمة المنتجات -->
+
+  <!-- المنتجات -->
   <div class="products" id="productsList"></div>
 
+  <!-- السلة -->
+  <div class="cart-box" id="cartBox" style="display:none;">
+    <div class="cart-title">سلة المشتريات:</div>
+    <div class="cart-items" id="cartItems"></div>
+    <div class="cart-summary" id="cartSummary"></div>
+    <button class="checkout-btn" id="checkoutBtn" onclick="showCheckout()">إتمام الطلب</button>
+  </div>
+
+  <!-- نافذة اتمام الطلب (شحن/استلام) -->
+  <div id="checkoutModal" style="display:none;"></div>
+
   <script>
-    // بيانات المنتجات (مأخوذة من ملفك)
+    // بيانات المنتجات (من ملفك)
     const products = [
       {
+        id: 1,
         title: "طقم اكواب شاي",
         img: "https://imgs.qasralawani.net/media/catalog/product/8/1/8105-27.jpg",
         price: 18,
@@ -51,6 +242,7 @@
         store: "غير متوفر"
       },
       {
+        id: 2,
         title: "قدر ضغط السيف استيل 5 لتر",
         img: "https://imgs.qasralawani.net/media/catalog/product/9/0/9002-5sl.jpg",
         price: 159,
@@ -58,6 +250,7 @@
         store: "غر متوفر"
       },
       {
+        id: 3,
         title: "حافظة طعام إستيل 5 لتر",
         img: "https://imgs.qasralawani.net/media/catalog/product/b/1/b18hp2-50g.jpg",
         price: 359,
@@ -65,6 +258,7 @@
         store: "متوفر"
       },
       {
+        id: 4,
         title: "حافظة طعام إستيل 2 لتر",
         img: "https://imgs.qasralawani.net/media/catalog/product/b/1/b18hp3-20g.jpg",
         price: 249,
@@ -72,9 +266,11 @@
         store: "متوفر"
       }
     ];
-    
+
     let mode = null; // "suwaidi" | "skip"
-    
+    let cart = [];
+
+    // ========== Popup منطق ==========
     function chooseLocation() {
       mode = "suwaidi";
       document.getElementById('popup').style.display = 'none';
@@ -86,17 +282,18 @@
       showProducts();
     }
 
+    // ========== عرض المنتجات ==========
     function showProducts() {
       const list = document.getElementById('productsList');
       list.innerHTML = '';
       products.forEach(product => {
-        // وضع المنطق حسب اختيار الموقع
+        // منطق التوفر حسب الموقع
         let available = false, fast = false, disableBtn = false;
         if (mode === "suwaidi") {
           if (product.suwaidi.trim() === "متوفر") {
             available = true;
             fast = true; // تاق شحن سريع
-          } else if (product.store.trim() === "متوفر") {
+          } else if (product.store.trim().includes("متوفر")) {
             available = true;
             fast = false;
           } else {
@@ -104,7 +301,7 @@
             disableBtn = true;
           }
         } else if (mode === "skip") {
-          if (product.store.trim() === "متوفر") {
+          if (product.store.trim().includes("متوفر")) {
             available = true;
             fast = false;
           } else {
@@ -112,17 +309,137 @@
             disableBtn = true;
           }
         }
-        
+        // هل المنتج مضاف بالفعل للسلة؟
+        const inCart = cart.find(item => item.id === product.id);
+
         list.innerHTML += `
           <div class="card${!available ? " unavailable" : ""}">
             ${fast ? `<div class="fast">شحن سريع</div>` : ""}
             <img src="${product.img}" alt="${product.title}">
             <h3>${product.title}</h3>
-            <div style="margin:6px 0 12px 0; font-weight:bold">${product.price} ريال</div>
-            <button class="add-btn" ${disableBtn ? "disabled" : ""}>${available ? "أضف للسلة" : "غير متوفر"}</button>
+            <div style="margin:7px 0 14px 0; font-weight:bold">${product.price} ريال</div>
+            <button class="add-btn" ${disableBtn || inCart ? "disabled" : ""} onclick="addToCart(${product.id})">${inCart ? "تمت الإضافة" : available ? "أضف للسلة" : "غير متوفر"}</button>
           </div>
         `;
       });
+      showCart();
+    }
+
+    // ========== منطق السلة ==========
+    function addToCart(productId) {
+      const product = products.find(p => p.id === productId);
+      if (!cart.find(item => item.id === productId)) {
+        cart.push({...product});
+        showProducts();
+      }
+    }
+    function removeFromCart(productId) {
+      cart = cart.filter(item => item.id !== productId);
+      showProducts();
+    }
+    function showCart() {
+      const box = document.getElementById('cartBox');
+      const items = document.getElementById('cartItems');
+      const summary = document.getElementById('cartSummary');
+      box.style.display = cart.length ? "block" : "none";
+      if (!cart.length) return;
+      items.innerHTML = '';
+      let total = 0;
+      cart.forEach(item => {
+        items.innerHTML += `
+          <div class="cart-item">
+            <img src="${item.img}" alt="${item.title}"/>
+            ${item.title} <span style="margin:0 7px;color:#059;">${item.price} ريال</span>
+            <button class="remove" onclick="removeFromCart(${item.id})">×</button>
+          </div>
+        `;
+        total += item.price;
+      });
+      summary.innerHTML = `الإجمالي: <span style="color:#1d68fd">${total} ريال</span>`;
+    }
+
+    // ========== صفحة إتمام الطلب ==========
+    function showCheckout() {
+      let html = `<div class="checkout-modal-bg"><div class="checkout-modal">`;
+      html += `<h2>اختر طريقة الشحن</h2>`;
+      html += `<button class="option-btn delivery" onclick="deliveryCheckout()">توصيل منزلي</button>`;
+      html += `<button class="option-btn pickup" onclick="pickupCheckout()">استلام من المعرض</button>`;
+      html += `<br><br><button class="option-btn" style="background:#eee;color:#222;" onclick="closeCheckout()">إغلاق</button>`;
+      html += `</div></div>`;
+      document.getElementById('checkoutModal').innerHTML = html;
+      document.getElementById('checkoutModal').style.display = "block";
+    }
+    function closeCheckout() {
+      document.getElementById('checkoutModal').style.display = "none";
+    }
+
+    // ====== توصيل منزلي ======
+    function deliveryCheckout() {
+      // المنتجات المتوفرة في السويدي عليها "توصيل سريع"
+      let html = `<div class="checkout-modal-bg"><div class="checkout-modal"><h2>ملخص الشحن المنزلي</h2>`;
+      cart.forEach(item => {
+        const fast = (item.suwaidi.trim() === "متوفر" && mode === "suwaidi");
+        html += `<div class="product-branch-status">
+          ${item.title}
+          <span class="${fast ? "branch-ok" : "branch-err"}">${fast ? "توصيل سريع" : "شحن عادي"}</span>
+        </div>`;
+      });
+      html += `<div style="margin-top:18px;"><button class="option-btn" style="background:#22c55e;color:#fff;" onclick="orderSuccess()">تأكيد الطلب</button>
+      <button class="option-btn" style="background:#eee;color:#222;" onclick="closeCheckout()">رجوع</button></div>`;
+      html += `</div></div>`;
+      document.getElementById('checkoutModal').innerHTML = html;
+    }
+
+    // ====== استلام من المعرض ======
+    function pickupCheckout() {
+      // تحقق من توفر المنتجات في السويدي
+      let allAvailable = cart.every(item => item.suwaidi.trim() === "متوفر");
+      let html = `<div class="checkout-modal-bg"><div class="checkout-modal"><h2>استلام من المعرض</h2>`;
+      html += `<div style="font-size:1.13em;margin-bottom:10px;">
+        فرع السويدي <span class="${allAvailable ? "branch-ok" : "branch-err"}">${allAvailable ? "متاح" : "منتجات ناقصة"}</span>
+      </div>`;
+      cart.forEach(item => {
+        const av = item.suwaidi.trim() === "متوفر";
+        html += `<div class="product-branch-status">
+          ${item.title}
+          <span class="${av ? "branch-ok" : "branch-err"}">${av ? "متوفر" : "غير متوفر"}</span>
+          ${!av ? `<button class="remove" onclick="removeAndPickup(${item.id})">حذف</button>` : ""}
+        </div>`;
+      });
+      if (allAvailable) {
+        html += `<div style="margin-top:20px;"><button class="option-btn" style="background:#22c55e;color:#fff;" onclick="orderSuccess()">تأكيد الطلب</button></div>`;
+      }
+      html += `<button class="option-btn" style="background:#eee;color:#222;margin-top:17px;" onclick="closeCheckout()">رجوع</button></div></div>`;
+      document.getElementById('checkoutModal').innerHTML = html;
+    }
+    function removeAndPickup(id) {
+      removeFromCart(id);
+      pickupCheckout();
+    }
+
+    // ====== نجاح الطلب ======
+    function orderSuccess() {
+      document.getElementById('checkoutModal').innerHTML = `<div class="checkout-modal-bg"><div class="checkout-modal">
+        <h2 style="color:#22c55e;font-size:1.3em;">تم استلام طلبك بنجاح!</h2>
+        <div style="font-size:1.12em;margin:14px 0;">شكراً لتسوقك معنا ❤</div>
+        <button class="option-btn" onclick="resetShop()">رجوع للرئيسية</button>
+      </div></div>`;
+      cart = [];
+      showProducts();
+    }
+
+    // ====== إعادة تعيين المتجر ======
+    function resetShop() {
+      document.getElementById('checkoutModal').style.display = "none";
+      cart = [];
+      showProducts();
+    }
+
+    // تفعيل الصفحة مع بداية التحميل
+    window.onload = function() {
+      // لإظهار اسم المدينة/الحي افتراضيًا
+      document.getElementById('citySelect').selectedIndex = 0;
+      document.getElementById('areaSelect').selectedIndex = 0;
     }
   </script>
 </body>
