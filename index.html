@@ -84,6 +84,7 @@
   <!-- صفحة إتمام الطلب -->
   <div id="checkoutPage" style="display:none;">
     <div class="checkout-page">
+      <div id="shippingAddressBox" style="margin-bottom:15px;"></div>
       <div class="checkout-title">عربة التسوق (<span id="checkoutCount"></span> منتجات)</div>
       <div style="margin-bottom:16px;font-weight:500;">كيف تريد استلام طلبك؟</div>
       <div class="shipping-options">
@@ -114,6 +115,7 @@
     ];
     let mode = null; // "suwaidi" | "skip"
     let cart = [];
+    let selectedShipping = "delivery";
     function chooseLocation() {
       const city = document.getElementById('citySelect').value;
       const area = document.getElementById('areaSelect').value;
@@ -130,47 +132,46 @@
       document.getElementById('popup').style.display = 'none';
       showProducts();
     }
-  function showProducts() {
-  document.getElementById('checkoutPage').style.display = "none";
-  document.getElementById('productsList').style.display = "grid";
-  const list = document.getElementById('productsList');
-  list.innerHTML = '';
-  products.forEach(product => {
-    let available = false, fast = false, disableBtn = false, unavailableMsg = "";
-    if (mode === "suwaidi") {
-      if (product.suwaidi.trim() === "متوفر") {
-        available = true; fast = true;
-      } else if (product.store.trim() === "متوفر") {
-        available = true; fast = false;
-      } else {
-        available = false; disableBtn = true;
-      }
-    } else if (mode === "skip") {
-      // فقط المنتجات المتوفرة في المتجر الالكتروني متاحة للشراء
-      if (product.store.trim() === "متوفر") {
-        available = true; fast = false;
-      } else {
-        available = false; disableBtn = true;
-        unavailableMsg = `<div style="color:#e14c1e;font-size:.92em;margin-top:4px;"></div>`;
-      }
+    function showProducts() {
+      document.getElementById('checkoutPage').style.display = "none";
+      document.getElementById('productsList').style.display = "grid";
+      const list = document.getElementById('productsList');
+      list.innerHTML = '';
+      products.forEach(product => {
+        let available = false, fast = false, disableBtn = false, unavailableMsg = "";
+        if (mode === "suwaidi") {
+          if (product.suwaidi.trim() === "متوفر") {
+            available = true; fast = true;
+          } else if (product.store.trim() === "متوفر") {
+            available = true; fast = false;
+          } else {
+            available = false; disableBtn = true;
+          }
+        } else if (mode === "skip") {
+          // فقط المنتجات المتوفرة في المتجر الالكتروني متاحة للشراء
+          if (product.store.trim() === "متوفر") {
+            available = true; fast = false;
+          } else {
+            available = false; disableBtn = true;
+            unavailableMsg = `<div style="color:#e14c1e;font-size:.92em;margin-top:4px;">غير متوفر للطلب أونلاين</div>`;
+          }
+        }
+        const inCart = cart.find(item => item.id === product.id);
+        list.innerHTML += `
+          <div class="card${!available ? " unavailable" : ""}">
+            ${mode === "suwaidi" && fast ? `<div class="fast">شحن سريع</div>` : ""}
+            <img src="${product.img}" alt="${product.title}">
+            <h3>${product.title}</h3>
+            <div style="margin:7px 0 14px 0; font-weight:bold">${product.price} ريال</div>
+            <button class="add-btn" ${disableBtn || inCart ? "disabled" : ""} onclick="addToCart(${product.id})">
+              ${inCart ? "تمت الإضافة" : available ? "أضف للسلة" : "غير متوفر"}
+            </button>
+            ${unavailableMsg}
+          </div>
+        `;
+      });
+      showCartFooter();
     }
-    const inCart = cart.find(item => item.id === product.id);
-    list.innerHTML += `
-      <div class="card${!available ? " unavailable" : ""}">
-        ${mode === "suwaidi" && fast ? `<div class="fast">شحن سريع</div>` : ""}
-        <img src="${product.img}" alt="${product.title}">
-        <h3>${product.title}</h3>
-        <div style="margin:7px 0 14px 0; font-weight:bold">${product.price} ريال</div>
-        <button class="add-btn" ${disableBtn || inCart ? "disabled" : ""} onclick="addToCart(${product.id})">
-          ${inCart ? "تمت الإضافة" : available ? "أضف للسلة" : "غير متوفر"}
-        </button>
-        ${unavailableMsg}
-      </div>
-    `;
-  });
-  showCartFooter();
-}
-
     function addToCart(productId) {
       const product = products.find(p => p.id === productId);
       if (!cart.find(item => item.id === productId)) {
@@ -194,23 +195,38 @@
         box.style.display = 'none';
       }
     }
-    // ========== صفحة إتمام الطلب ==========
-    let selectedShipping = "delivery";
     function showCheckoutPage() {
       document.getElementById('productsList').style.display = "none";
       document.getElementById('cartFooter').style.display = "none";
       document.getElementById('checkoutPage').style.display = "block";
       document.getElementById('checkoutCount').innerText = cart.length;
-      // حساب المنتجات المتوفرة للتوصيل المنزلي
+
+      // عنوان الشحن أعلى عربة التسوق
+      let addressHtml = '';
+      if (mode === 'suwaidi') {
+        addressHtml = `<div style="font-weight:600;font-size:1.07em;color:#223;">عنوان الشحن: <span style="color:#076aff">${document.getElementById('citySelect').value} - ${document.getElementById('areaSelect').value}</span></div>`;
+      } else {
+        addressHtml = `
+          <div style="font-weight:600;font-size:1.07em;color:#223;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            عنوان الشحن:
+            <select id="cityShipping" style="font-size:.97em;padding:4px 12px;border-radius:7px;border:1px solid #aaa;">
+              <option value="الرياض">الرياض</option>
+            </select>
+            <select id="areaShipping" style="font-size:.97em;padding:4px 12px;border-radius:7px;border:1px solid #aaa;">
+              <option value="حي السويدي">حي السويدي</option>
+            </select>
+          </div>
+        `;
+      }
+      document.getElementById('shippingAddressBox').innerHTML = addressHtml;
+
       let deliveryCount = cart.filter(item =>
-        (mode === "suwaidi" && (item.suwaidi.trim() === "متوفر" || item.store.trim().includes("متوفر"))) ||
-        (mode === "skip" && item.store.trim().includes("متوفر"))
+        (mode === "suwaidi" && (item.suwaidi.trim() === "متوفر" || item.store.trim() === "متوفر")) ||
+        (mode === "skip" && item.store.trim() === "متوفر")
       ).length;
-      // المنتجات المتوفرة في المعرض فقط (فرع السويدي)
       let pickupCount = cart.filter(item => item.suwaidi.trim() === "متوفر").length;
       document.getElementById('deliveryNote').innerHTML = `يتوفر ${deliveryCount} من ${cart.length} من المنتجات`;
       document.getElementById('pickupNote').innerHTML = `يتوفر ${pickupCount} من ${cart.length} من المنتجات`;
-      // تفعيل الخيار الأول افتراضيًا
       selectShipping(selectedShipping);
       document.getElementById('orderSuccess').style.display = "none";
       updateShippingDetails();
@@ -227,7 +243,6 @@
       const details = document.getElementById('shippingDetails');
       if (selectedShipping === 'pickup') {
         // اختيار فرع السويدي فقط، منتجات غير متوفرة بالاحمر وزر حذف
-        let allAvailable = cart.every(item => item.suwaidi.trim() === "متوفر");
         let html = `
           <select class="branch-select" disabled>
             <option>فرع السويدي</option>
@@ -249,7 +264,7 @@
           const fast = (item.suwaidi.trim() === "متوفر");
           html += `<div class="delivery-product">
             <span>${item.title}</span>
-            ${fast ? `<span class="fast">شحن سريع</span>` : ""}
+            ${fast && mode === "suwaidi" ? `<span class="fast">شحن سريع</span>` : ""}
           </div>`;
         });
         details.innerHTML = html;
