@@ -100,6 +100,7 @@
         </div>
       </div>
       <div id="shippingDetails"></div>
+      <div id="shippingFeesBox" style="margin:24px 0 6px 0;text-align:center;"></div>
       <button class="confirm-btn" onclick="confirmOrder()">تأكيد الطلب</button>
       <div id="orderSuccess" class="order-success" style="display:none;"></div>
       <button class="confirm-btn" onclick="backToShop()" style="background:#eee;color:#222;margin-top:12px;">رجوع للمتجر</button>
@@ -241,9 +242,10 @@
     }
     function updateShippingDetails() {
       const details = document.getElementById('shippingDetails');
+      let hasFast = false, hasNormal = false;
+      let html = '';
       if (selectedShipping === 'pickup') {
-        // اختيار فرع السويدي فقط، منتجات غير متوفرة بالاحمر وزر حذف
-        let html = `
+        html = `
           <select class="branch-select" disabled>
             <option>فرع السويدي</option>
           </select>
@@ -256,19 +258,36 @@
             ${!av ? `<button class="remove-btn" onclick="removeAndRefresh(${item.id})">حذف</button>` : ""}
           </div>`;
         });
-        details.innerHTML = html;
+        document.getElementById('shippingFeesBox').innerHTML = ""; // لا رسوم شحن في الاستلام
       } else if (selectedShipping === 'delivery') {
-        // عرض المنتجات وتاق شحن سريع للمتاحة من السويدي
-        let html = '';
         cart.forEach(item => {
-          const fast = (item.suwaidi.trim() === "متوفر");
+          const fast = (item.suwaidi.trim() === "متوفر" && mode === "suwaidi");
+          if (fast) hasFast = true;
+          else hasNormal = true;
           html += `<div class="delivery-product">
             <span>${item.title}</span>
-            ${fast && mode === "suwaidi" ? `<span class="fast">شحن سريع</span>` : ""}
+            ${fast ? `<span class="fast">شحن سريع</span>` : ""}
           </div>`;
         });
-        details.innerHTML = html;
+
+        // حساب الرسوم حسب وجود منتجات سريعة أو عادية
+        let fastFee = hasFast ? 25 : 0;
+        let normalFee = hasNormal ? 20 : 0;
+        let feesHtml = `
+          <div style="margin:14px auto 0 auto;max-width:280px;text-align:center;">
+            <div style="background:#f6fff8;border-radius:9px;padding:7px 0;font-size:1.06em;">
+              <span>رسم الشحن السريع:</span>
+              <b style="color:#13a040">${fastFee} ريال</b>
+            </div>
+            <div style="background:#f7faff;border-radius:9px;padding:7px 0;font-size:1.06em;margin-top:6px;">
+              <span>رسم الشحن العادي:</span>
+              <b style="color:#177ad6">${normalFee} ريال</b>
+            </div>
+          </div>
+        `;
+        document.getElementById('shippingFeesBox').innerHTML = feesHtml;
       }
+      details.innerHTML = html;
     }
     function removeAndRefresh(id) {
       removeFromCart(id);
